@@ -212,12 +212,24 @@ export default function EventPage({ params }) {
   }, [eventId]);
 
   // 5초마다 참가자 데이터 폴링 (실시간 협업)
+  // 내 데이터는 덮어쓰지 않음 (깜빡임 방지)
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/events/${eventId}/participants`);
         if (res.ok) {
-          setParticipants(await res.json());
+          const data = await res.json();
+          // 내 이름이 있으면 다른 참가자 데이터만 업데이트
+          const currentName = name.trim();
+          if (currentName) {
+            setParticipants((prev) => {
+              const others = data.filter((p) => p.name !== currentName);
+              const me = prev.find((p) => p.name === currentName);
+              return me ? [...others, me] : data;
+            });
+          } else {
+            setParticipants(data);
+          }
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -225,7 +237,7 @@ export default function EventPage({ params }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [eventId]);
+  }, [eventId, name]);
 
   // 로컬스토리지에서 내 이름 복원
   useEffect(() => {
