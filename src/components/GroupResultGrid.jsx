@@ -12,6 +12,11 @@ const Container = styled.div`
   border-radius: 12px;
   padding: 16px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
 `;
 
 const Header = styled.div`
@@ -42,15 +47,84 @@ const FilterLabel = styled.span`
 `;
 
 const FilterButton = styled.button`
-  padding: 4px 8px;
+  padding: 6px 10px;
   border: 1px solid ${(props) => (props.$active ? "var(--accent)" : "var(--border-subtle)")};
   border-radius: 4px;
   background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
   color: ${(props) => (props.$active ? "white" : "var(--text-secondary)")};
   font-size: 11px;
+  
+  @media (max-width: 768px) {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
 
   &:hover {
     border-color: var(--accent);
+  }
+`;
+
+const DropdownWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const DropdownTrigger = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 100px;
+  justify-content: space-between;
+  
+  &:hover {
+    border-color: var(--accent);
+  }
+  
+  &::after {
+    content: '▼';
+    font-size: 8px;
+    color: var(--text-muted);
+  }
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 120px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  padding: 4px;
+`;
+
+const DropdownItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: ${(props) => (props.$active ? "var(--accent)" : "transparent")};
+  color: ${(props) => (props.$active ? "white" : "var(--text-primary)")};
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  
+  &:hover {
+    background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
   }
 `;
 
@@ -82,9 +156,15 @@ const LegendColor = styled.div`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 50px repeat(7, 1fr);
+  grid-template-columns: 50px repeat(7, minmax(40px, 1fr));
   gap: 2px;
   user-select: none;
+  min-width: 330px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 40px repeat(7, minmax(36px, 1fr));
+    gap: 1px;
+  }
 `;
 
 const HeaderCell = styled.div`
@@ -226,8 +306,10 @@ export default function GroupResultGrid({
   participants,
 }) {
   const [tooltip, setTooltip] = useState(null);
-  const [minSlots, setMinSlots] = useState(0); // 0, 2(1시간), 4(2시간), 6(3시간)
-  const [minPeople, setMinPeople] = useState(null); // null = 전체, 숫자 = 해당 인원 이상
+  const [minSlots, setMinSlots] = useState(0);
+  const [minPeople, setMinPeople] = useState(null);
+  const [slotsDropdownOpen, setSlotsDropdownOpen] = useState(false);
+  const [peopleDropdownOpen, setPeopleDropdownOpen] = useState(false);
 
   const hours = [];
   for (let h = startTime; h < endTime; h++) {
@@ -398,34 +480,68 @@ export default function GroupResultGrid({
         <GridTitle>그룹 결과 ({totalParticipants}명)</GridTitle>
         <FilterContainer>
           <FilterLabel>연속:</FilterLabel>
-          {[
-            { slots: 0, label: "전체" },
-            { slots: 1, label: "30분+" },
-            { slots: 2, label: "1시간+" },
-            { slots: 4, label: "2시간+" },
-          ].map(({ slots, label }) => (
-            <FilterButton
-              key={slots}
-              $active={minSlots === slots}
-              onClick={() => setMinSlots(slots)}
-            >
-              {label}
-            </FilterButton>
-          ))}
+          <DropdownWrapper>
+            <DropdownTrigger onClick={() => { setSlotsDropdownOpen(!slotsDropdownOpen); setPeopleDropdownOpen(false); }}>
+              {minSlots === 0 ? '전체' : (() => {
+                const h = Math.floor(minSlots / 2);
+                const m = (minSlots % 2) * 30;
+                return h > 0 ? (m > 0 ? `${h}시간 ${m}분+` : `${h}시간+`) : `${m}분+`;
+              })()}
+            </DropdownTrigger>
+            {slotsDropdownOpen && (
+              <DropdownMenu>
+                <DropdownItem
+                  $active={minSlots === 0}
+                  onClick={() => { setMinSlots(0); setSlotsDropdownOpen(false); }}
+                >
+                  전체
+                </DropdownItem>
+                {Array.from({ length: (endTime - startTime) * 2 }, (_, i) => i + 1).map((slots) => {
+                  const h = Math.floor(slots / 2);
+                  const m = (slots % 2) * 30;
+                  const label = h > 0 ? (m > 0 ? `${h}시간 ${m}분+` : `${h}시간+`) : `${m}분+`;
+                  return (
+                    <DropdownItem
+                      key={slots}
+                      $active={minSlots === slots}
+                      onClick={() => { setMinSlots(slots); setSlotsDropdownOpen(false); }}
+                    >
+                      {label}
+                    </DropdownItem>
+                  );
+                })}
+              </DropdownMenu>
+            )}
+          </DropdownWrapper>
         </FilterContainer>
         
         {totalParticipants > 1 && (
           <FilterContainer>
             <FilterLabel>인원:</FilterLabel>
-            {[null, ...Array.from({ length: totalParticipants }, (_, i) => totalParticipants - i)].map((count) => (
-              <FilterButton
-                key={count === null ? 'all' : count}
-                $active={minPeople === count}
-                onClick={() => setMinPeople(count)}
-              >
-                {count === null ? `전체` : `${count}명+`}
-              </FilterButton>
-            ))}
+            <DropdownWrapper>
+              <DropdownTrigger onClick={() => { setPeopleDropdownOpen(!peopleDropdownOpen); setSlotsDropdownOpen(false); }}>
+                {minPeople === null ? `전체 (${totalParticipants}명)` : `${minPeople}명 이상`}
+              </DropdownTrigger>
+              {peopleDropdownOpen && (
+                <DropdownMenu>
+                  <DropdownItem
+                    $active={minPeople === null}
+                    onClick={() => { setMinPeople(null); setPeopleDropdownOpen(false); }}
+                  >
+                    전체 ({totalParticipants}명)
+                  </DropdownItem>
+                  {Array.from({ length: totalParticipants }, (_, i) => totalParticipants - i).map((count) => (
+                    <DropdownItem
+                      key={count}
+                      $active={minPeople === count}
+                      onClick={() => { setMinPeople(count); setPeopleDropdownOpen(false); }}
+                    >
+                      {count}명 이상
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              )}
+            </DropdownWrapper>
           </FilterContainer>
         )}
       </Header>

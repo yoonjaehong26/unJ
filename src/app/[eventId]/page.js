@@ -12,6 +12,10 @@ const Container = styled.main`
   max-width: 900px;
   margin: 0 auto;
   padding: 24px 20px;
+  
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
 `;
 
 const Header = styled.header`
@@ -19,28 +23,47 @@ const Header = styled.header`
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
+  gap: 12px;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 16px;
+  }
 `;
 
 const Title = styled.h1`
   font-size: 24px;
   font-weight: 600;
+  
+  @media (max-width: 768px) {
+    font-size: 20px;
+  }
 `;
 
 const CopyButton = styled.button`
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   background: var(--bg-secondary);
   color: var(--text-secondary);
   font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     border-color: var(--text-muted);
+  }
+  
+  &:active {
+    background: var(--bg-tertiary);
   }
 `;
 
 const NameSection = styled.div`
   margin-bottom: 24px;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 16px;
+  }
 `;
 
 const Label = styled.label`
@@ -53,16 +76,21 @@ const Label = styled.label`
 
 const NameInput = styled.input`
   width: 200px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 16px; /* 모바일에서 확대 방지 */
 
   &:focus {
     outline: none;
     border-color: var(--accent);
+  }
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 280px;
   }
 `;
 
@@ -73,6 +101,7 @@ const GridsContainer = styled.div`
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
