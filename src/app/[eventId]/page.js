@@ -450,8 +450,8 @@ export default function EventPage({ params }) {
               아직 참가자가 없습니다
             </span>
           ) : (
-            participants.map((p) => (
-              <ParticipantTag key={p._id}>{p.name}</ParticipantTag>
+            participants.map((p, index) => (
+              <ParticipantTag key={p._id || p.name || index}>{p.name}</ParticipantTag>
             ))
           )}
         </ParticipantList>
