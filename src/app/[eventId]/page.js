@@ -148,6 +148,22 @@ export default function EventPage({ params }) {
     load();
   }, [eventId]);
 
+  // 5초마다 참가자 데이터 폴링 (실시간 협업)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/events/${eventId}/participants`);
+        if (res.ok) {
+          setParticipants(await res.json());
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [eventId]);
+
   // 로컬스토리지에서 내 이름 복원
   useEffect(() => {
     const savedName = localStorage.getItem(`unj-name-${eventId}`);
