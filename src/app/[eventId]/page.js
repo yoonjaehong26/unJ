@@ -182,6 +182,8 @@ export default function EventPage({ params }) {
   const [saving, setSaving] = useState(false);
   const [viewStartTime, setViewStartTime] = useState(null);
   const [viewEndTime, setViewEndTime] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [previousName, setPreviousName] = useState("");
   
   // 디바운스용 타이머
   const saveTimeoutRef = useRef(null);
@@ -333,9 +335,41 @@ export default function EventPage({ params }) {
     saveAvailabilityDebounced(newAvailability);
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    alert("링크가 복사되었습니다!");
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // 이름 변경 시 저장
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    setName(newName);
+  };
+
+  // 이름 입력 완료 시 (blur) 저장
+  const handleNameBlur = () => {
+    const trimmedName = name.trim();
+    if (trimmedName && trimmedName !== previousName) {
+      localStorage.setItem(`unj-name-${eventId}`, trimmedName);
+      setPreviousName(trimmedName);
+      // 가용시간이 있으면 새 이름으로 저장
+      if (myAvailability.length > 0) {
+        doSave(myAvailability);
+      }
+    }
   };
 
   if (loading) {
@@ -350,7 +384,9 @@ export default function EventPage({ params }) {
     <Container>
       <Header>
         <Title>{event.name}</Title>
-        <CopyButton onClick={handleCopyLink}>링크 복사</CopyButton>
+        <CopyButton onClick={handleCopyLink}>
+          {copied ? "✓ 복사됨" : "링크 복사"}
+        </CopyButton>
       </Header>
 
       <TimeFilterSection>
@@ -383,7 +419,8 @@ export default function EventPage({ params }) {
           type="text"
           placeholder="이름을 입력하세요"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={handleNameChange}
+          onBlur={handleNameBlur}
         />
       </NameSection>
 
