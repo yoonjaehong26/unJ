@@ -128,12 +128,25 @@ const HalfHourCell = styled.div`
     const total = available + maybe;
     if (total === 0) return "var(--bg-secondary)";
     
-    // maybe가 더 많으면 노란색 계열, 아니면 초록색 계열
-    if (maybe > available) {
-      const intensity = Math.min(total / props.$total, 1);
+    // 둘 다 있으면 좌우 분할 그라데이션
+    if (available > 0 && maybe > 0) {
+      const greenIntensity = Math.min(available / props.$total, 1);
+      const yellowIntensity = Math.min(maybe / props.$total, 1);
+      return `linear-gradient(90deg, 
+        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%, 
+        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 50%, 
+        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 50%, 
+        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 100%)`;
+    }
+    
+    // maybe만 있으면 노란색
+    if (maybe > 0) {
+      const intensity = Math.min(maybe / props.$total, 1);
       return `rgba(245, 166, 35, ${0.3 + intensity * 0.7})`;
     }
-    const intensity = Math.min(total / props.$total, 1);
+    
+    // available만 있으면 초록색
+    const intensity = Math.min(available / props.$total, 1);
     return `rgba(76, 175, 80, ${0.2 + intensity * 0.8})`;
   }};
   cursor: pointer;
@@ -143,7 +156,7 @@ const HalfHourCell = styled.div`
   justify-content: center;
   font-size: 9px;
   font-weight: 600;
-  color: ${(props) => ((props.$available || 0) + (props.$maybe || 0) > 0 ? "white" : "transparent")};
+  color: white;
   box-sizing: border-box;
   margin-bottom: 1px;
   
@@ -174,6 +187,24 @@ const HalfHourCell = styled.div`
   }
 `;
 
+// 좌우 분할 표시용
+const SplitContent = styled.div`
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+`;
+
+const SplitNumber = styled.span`
+  flex: 1;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: white;
+`;
+
 const Tooltip = styled.div`
   position: fixed;
   background: var(--bg-primary);
@@ -196,6 +227,7 @@ export default function GroupResultGrid({
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [minSlots, setMinSlots] = useState(0); // 0, 2(1시간), 4(2시간), 6(3시간)
+  const [minPeople, setMinPeople] = useState(null); // null = 전체, 숫자 = 해당 인원 이상
 
   const hours = [];
   for (let h = startTime; h < endTime; h++) {
@@ -203,6 +235,7 @@ export default function GroupResultGrid({
   }
 
   const totalParticipants = participants.length;
+  const requiredPeople = minPeople === null ? totalParticipants : minPeople;
 
   // 각 슬롯별 인원 계산 (30분 단위) - available과 maybe 분리
   const getCounts = (dateIdx, hour, minute) => {
@@ -250,54 +283,54 @@ export default function GroupResultGrid({
   // 연속 가능 슬롯 체크 (초록색: available만, 노란색: available+maybe)
   const isHighlightedGreen = (dateIdx, hour, minute) => {
     if (minSlots === 0) return false;
-    if (totalParticipants === 0) return false;
+    if (requiredPeople === 0) return false;
     
     const currentIdx = slotToIndex(hour, minute);
     
     // 이 슬롯이 "가능"만으로 연속 블록의 일부인지 확인
     for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
-      let allAvailable = true;
+      let enoughAvailable = true;
       for (let i = startIdx; i < startIdx + minSlots; i++) {
         if (i >= totalSlots) {
-          allAvailable = false;
+          enoughAvailable = false;
           break;
         }
         const { hour: h, minute: m } = indexToSlot(i);
         const counts = getCounts(dateIdx, h, m);
-        // 모두가 "가능"이어야 함 (maybe 제외)
-        if (counts.available < totalParticipants) {
-          allAvailable = false;
+        // 필요 인원 이상이 "가능"이어야 함
+        if (counts.available < requiredPeople) {
+          enoughAvailable = false;
           break;
         }
       }
-      if (allAvailable) return true;
+      if (enoughAvailable) return true;
     }
     return false;
   };
 
   const isHighlightedYellow = (dateIdx, hour, minute) => {
     if (minSlots === 0) return false;
-    if (totalParticipants === 0) return false;
+    if (requiredPeople === 0) return false;
     
     const currentIdx = slotToIndex(hour, minute);
     
     // "가능" or "조정가능" 포함 연속 블록 확인
     for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
-      let allHaveTime = true;
+      let enoughTotal = true;
       for (let i = startIdx; i < startIdx + minSlots; i++) {
         if (i >= totalSlots) {
-          allHaveTime = false;
+          enoughTotal = false;
           break;
         }
         const { hour: h, minute: m } = indexToSlot(i);
         const counts = getCounts(dateIdx, h, m);
-        // 모두가 "가능" 또는 "조정가능" 중 하나로 표시해야 함
-        if (counts.total < totalParticipants) {
-          allHaveTime = false;
+        // 필요 인원 이상이 "가능" 또는 "조정가능"으로 표시
+        if (counts.total < requiredPeople) {
+          enoughTotal = false;
           break;
         }
       }
-      if (allHaveTime) return true;
+      if (enoughTotal) return true;
     }
     return false;
   };
@@ -380,6 +413,21 @@ export default function GroupResultGrid({
             </FilterButton>
           ))}
         </FilterContainer>
+        
+        {totalParticipants > 1 && (
+          <FilterContainer>
+            <FilterLabel>인원:</FilterLabel>
+            {[null, ...Array.from({ length: totalParticipants }, (_, i) => totalParticipants - i)].map((count) => (
+              <FilterButton
+                key={count === null ? 'all' : count}
+                $active={minPeople === count}
+                onClick={() => setMinPeople(count)}
+              >
+                {count === null ? `전체` : `${count}명+`}
+              </FilterButton>
+            ))}
+          </FilterContainer>
+        )}
       </Header>
 
       <Legend>
@@ -435,7 +483,12 @@ export default function GroupResultGrid({
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {counts00.total > 0 ? counts00.total : ""}
+                    {counts00.available > 0 && counts00.maybe > 0 ? (
+                      <SplitContent>
+                        <SplitNumber>{counts00.available}</SplitNumber>
+                        <SplitNumber>{counts00.maybe}</SplitNumber>
+                      </SplitContent>
+                    ) : counts00.total > 0 ? counts00.total : ""}
                   </HalfHourCell>
                   {/* 30분 (XX:30) */}
                   <HalfHourCell
@@ -450,7 +503,12 @@ export default function GroupResultGrid({
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {counts30.total > 0 ? counts30.total : ""}
+                    {counts30.available > 0 && counts30.maybe > 0 ? (
+                      <SplitContent>
+                        <SplitNumber>{counts30.available}</SplitNumber>
+                        <SplitNumber>{counts30.maybe}</SplitNumber>
+                      </SplitContent>
+                    ) : counts30.total > 0 ? counts30.total : ""}
                   </HalfHourCell>
                 </HourGroup>
               );
