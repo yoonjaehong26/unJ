@@ -254,7 +254,7 @@ export default function EventPage({ params }) {
 
   // 실제 저장 함수
   const doSave = useCallback(async (availability) => {
-    const currentName = localStorage.getItem(`unj-name-${eventId}`) || name.trim();
+    const currentName = name.trim();
     if (!currentName) return;
     
     setSaving(true);
@@ -270,10 +270,15 @@ export default function EventPage({ params }) {
       });
 
       if (res.ok) {
-        const participantsRes = await fetch(`/api/events/${eventId}/participants`);
-        if (participantsRes.ok) {
-          setParticipants(await participantsRes.json());
-        }
+        // 저장 성공 시 로컬 상태만 업데이트 (다시 fetch 안 함)
+        // 내 데이터를 participants에 반영
+        setParticipants((prev) => {
+          const others = prev.filter((p) => p.name !== currentName);
+          const myData = { name: currentName, availability };
+          return [...others, myData];
+        });
+      } else {
+        console.error("Save failed:", await res.text());
       }
     } catch (error) {
       console.error("Save error:", error);
@@ -303,18 +308,25 @@ export default function EventPage({ params }) {
     }, 500);
   }, [name, eventId, doSave]);
 
-  // 컴포넌트 언마운트 시 저장
+  // 컴포넌트 언마운트 시 저장 (sendBeacon으로 확실하게)
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
       if (pendingAvailabilityRef.current && name.trim()) {
-        // 언마운트 시 즉시 저장
-        doSave(pendingAvailabilityRef.current);
+        // sendBeacon으로 페이지 떠나도 저장 보장
+        const payload = JSON.stringify({
+          name: name.trim(),
+          availability: pendingAvailabilityRef.current,
+        });
+        navigator.sendBeacon(
+          `/api/events/${eventId}/participants`,
+          new Blob([payload], { type: "application/json" })
+        );
       }
     };
-  }, [doSave, name]);
+  }, [eventId, name]);
 
   const handleAvailabilityChange = (newAvailability) => {
     setMyAvailability(newAvailability);
