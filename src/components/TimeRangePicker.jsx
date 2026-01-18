@@ -33,7 +33,9 @@ const Separator = styled.span`
   font-size: 12px;
 `;
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+// 0~24시 (24시 = 자정)
+const START_HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
+const END_HOURS = Array.from({ length: 25 }, (_, i) => i); // 0-24
 
 export default function TimeRangePicker({ startTime = 9, endTime = 18, onChange }) {
   const handleStartChange = (e) => {
@@ -46,13 +48,14 @@ export default function TimeRangePicker({ startTime = 9, endTime = 18, onChange 
   };
 
   const formatHour = (hour) => {
+    if (hour === 24) return "24:00 (자정)";
     return `${hour.toString().padStart(2, "0")}:00`;
   };
 
   return (
     <Container>
       <Select value={startTime} onChange={handleStartChange}>
-        {HOURS.slice(0, -1).map((h) => (
+        {START_HOURS.map((h) => (
           <option key={h} value={h}>
             {formatHour(h)}
           </option>
@@ -60,7 +63,7 @@ export default function TimeRangePicker({ startTime = 9, endTime = 18, onChange 
       </Select>
       <Separator>~</Separator>
       <Select value={endTime} onChange={handleEndChange}>
-        {HOURS.filter((h) => h > startTime).map((h) => (
+        {END_HOURS.filter((h) => h > startTime).map((h) => (
           <option key={h} value={h}>
             {formatHour(h)}
           </option>
