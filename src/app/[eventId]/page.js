@@ -139,6 +139,38 @@ const SaveStatus = styled.span`
   color: var(--accent);
 `;
 
+const TimeFilterSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 6px;
+  }
+`;
+
+const TimeFilterLabel = styled.span`
+  font-size: 13px;
+  color: var(--text-secondary);
+`;
+
+const TimeSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+`;
+
 export default function EventPage({ params }) {
   const { eventId } = use(params);
   
@@ -148,6 +180,8 @@ export default function EventPage({ params }) {
   const [myAvailability, setMyAvailability] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [viewStartTime, setViewStartTime] = useState(null);
+  const [viewEndTime, setViewEndTime] = useState(null);
   
   // 디바운스용 타이머
   const saveTimeoutRef = useRef(null);
@@ -295,6 +329,27 @@ export default function EventPage({ params }) {
         <CopyButton onClick={handleCopyLink}>링크 복사</CopyButton>
       </Header>
 
+      <TimeFilterSection>
+        <TimeFilterLabel>시간 범위:</TimeFilterLabel>
+        <TimeSelect 
+          value={viewStartTime ?? event.startTime} 
+          onChange={(e) => setViewStartTime(Number(e.target.value))}
+        >
+          {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i).map((h) => (
+            <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
+          ))}
+        </TimeSelect>
+        <span>~</span>
+        <TimeSelect 
+          value={viewEndTime ?? event.endTime} 
+          onChange={(e) => setViewEndTime(Number(e.target.value))}
+        >
+          {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i + 1).map((h) => (
+            <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
+          ))}
+        </TimeSelect>
+      </TimeFilterSection>
+
       <NameSection>
         <Label>
           내 이름
@@ -311,8 +366,8 @@ export default function EventPage({ params }) {
       <GridsContainer>
         <AvailabilityGrid
           dates={event.dates}
-          startTime={event.startTime}
-          endTime={event.endTime}
+          startTime={viewStartTime ?? event.startTime}
+          endTime={viewEndTime ?? event.endTime}
           availability={myAvailability}
           onChange={handleAvailabilityChange}
           readOnly={!name.trim()}
@@ -320,8 +375,8 @@ export default function EventPage({ params }) {
 
         <GroupResultGrid
           dates={event.dates}
-          startTime={event.startTime}
-          endTime={event.endTime}
+          startTime={viewStartTime ?? event.startTime}
+          endTime={viewEndTime ?? event.endTime}
           participants={participants}
         />
       </GridsContainer>
