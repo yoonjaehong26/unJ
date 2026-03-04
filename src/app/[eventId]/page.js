@@ -190,11 +190,19 @@ const ParticipantList = styled.div`
   margin-top: 8px;
 `;
 
-const ParticipantTag = styled.span`
+const ParticipantTag = styled.button`
   padding: 4px 10px;
-  background: var(--bg-secondary);
+  background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
+  color: ${(props) => (props.$active ? "white" : "var(--text-primary)")};
+  border: 1px solid ${(props) => (props.$active ? "var(--accent)" : "transparent")};
   border-radius: 6px;
   font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
 `;
 
 const Loading = styled.div`
@@ -340,6 +348,7 @@ export default function EventPage({ params }) {
   const [viewStartTime, setViewStartTime] = useState(null);
   const [viewEndTime, setViewEndTime] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
 
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
@@ -695,6 +704,27 @@ export default function EventPage({ params }) {
         )}
       </NameSection>
 
+      <Participants>
+        <Label>참가자 ({participants.length}명){selectedParticipant && <span style={{ marginLeft: 8, fontSize: 12, color: "var(--accent)" }}>— {selectedParticipant.name}의 일정 보는 중</span>}</Label>
+        <ParticipantList>
+          {participants.length === 0 ? (
+            <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>
+              아직 참가자가 없습니다
+            </span>
+          ) : (
+            participants.map((p, index) => (
+              <ParticipantTag
+                key={p._id || p.name || index}
+                $active={selectedParticipant?.name === p.name}
+                onClick={() => setSelectedParticipant(selectedParticipant?.name === p.name ? null : p)}
+              >
+                {p.name}
+              </ParticipantTag>
+            ))
+          )}
+        </ParticipantList>
+      </Participants>
+
       <GridsContainer>
         <AvailabilityGrid
           dates={event.dates}
@@ -710,23 +740,9 @@ export default function EventPage({ params }) {
           startTime={viewStartTime ?? event.startTime}
           endTime={viewEndTime ?? event.endTime}
           participants={participants}
+          selectedParticipant={selectedParticipant}
         />
       </GridsContainer>
-
-      <Participants>
-        <Label>참가자 ({participants.length}명)</Label>
-        <ParticipantList>
-          {participants.length === 0 ? (
-            <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>
-              아직 참가자가 없습니다
-            </span>
-          ) : (
-            participants.map((p, index) => (
-              <ParticipantTag key={p._id || p.name || index}>{p.name}</ParticipantTag>
-            ))
-          )}
-        </ParticipantList>
-      </Participants>
 
       {/* 비밀번호 모달 */}
       {showPasswordModal && (

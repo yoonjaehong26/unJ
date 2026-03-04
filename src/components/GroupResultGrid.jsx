@@ -262,8 +262,20 @@ const HalfHourCell = styled.div`
     return `box-shadow: ${shadow}; ${radius}`;
   }}
 
+  /* 선택된 참가자가 없는 슬롯은 어둡게 */
+  ${(props) => props.$dimmed && `
+    opacity: 0.15;
+  `}
+
+  /* 선택된 참가자가 있는 슬롯 강조 */
+  ${(props) => props.$highlighted && `
+    outline: 2px solid ${props.$highlighted === 'available' ? 'var(--accent)' : '#F5A623'};
+    outline-offset: -2px;
+    z-index: 1;
+  `}
+
   &:hover {
-    opacity: 0.8;
+    opacity: ${(props) => props.$dimmed ? 0.15 : 0.8};
   }
 `;
 
@@ -304,6 +316,7 @@ export default function GroupResultGrid({
   startTime,
   endTime,
   participants,
+  selectedParticipant,
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [minSlots, setMinSlots] = useState(0);
@@ -351,6 +364,15 @@ export default function GroupResultGrid({
       }
     });
     return { availableNames, maybeNames };
+  };
+
+  // 선택된 참가자의 해당 슬롯 상태
+  const getSelectedStatus = (dateIdx, hour, minute) => {
+    if (!selectedParticipant) return null;
+    const slot = selectedParticipant.availability?.find(
+      (a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute
+    );
+    return slot ? slot.status : null;
   };
 
   // 슬롯을 인덱스로 변환 (계산 편의)
@@ -584,6 +606,8 @@ export default function GroupResultGrid({
               const counts30 = getCounts(dateIdx, hour, 30);
               const border00 = getBorderInfo(dateIdx, hour, 0);
               const border30 = getBorderInfo(dateIdx, hour, 30);
+              const sel00 = getSelectedStatus(dateIdx, hour, 0);
+              const sel30 = getSelectedStatus(dateIdx, hour, 30);
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
                   {/* 정시 (XX:00) */}
@@ -596,6 +620,8 @@ export default function GroupResultGrid({
                     $borderSides={border00.borderSides}
                     $borderColor={border00.borderColor}
                     $isHalf={false}
+                    $dimmed={selectedParticipant && !sel00}
+                    $highlighted={sel00}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -616,6 +642,8 @@ export default function GroupResultGrid({
                     $borderSides={border30.borderSides}
                     $borderColor={border30.borderColor}
                     $isHalf={true}
+                    $dimmed={selectedParticipant && !sel30}
+                    $highlighted={sel30}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
                   >
