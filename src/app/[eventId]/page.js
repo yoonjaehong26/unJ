@@ -649,7 +649,7 @@ export default function EventPage({ params }) {
           value={viewStartTime ?? event.startTime}
           onChange={(e) => setViewStartTime(Number(e.target.value))}
         >
-          {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i).map((h) => (
+          {Array.from({ length: 24 }, (_, i) => i).map((h) => (
             <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
           ))}
         </TimeSelect>
@@ -658,7 +658,7 @@ export default function EventPage({ params }) {
           value={viewEndTime ?? event.endTime}
           onChange={(e) => setViewEndTime(Number(e.target.value))}
         >
-          {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i + 1).map((h) => (
+          {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
             <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
           ))}
         </TimeSelect>
