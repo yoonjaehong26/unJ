@@ -4,7 +4,6 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { getCurrentUserId } from "@/lib/auth";
 
 // 참가자 목록 조회
 export async function GET(request, { params }) {
@@ -27,7 +26,7 @@ export async function GET(request, { params }) {
         _id: p._id.toString(),
         name: p.name,
         availability: p.availability,
-        userId: p.userId?.toString() || null,
+        hasPassword: !!p.password,
       }))
     );
   } catch (error) {
@@ -54,9 +53,6 @@ export async function POST(request, { params }) {
     const client = await clientPromise;
     const db = client.db("unj");
 
-    // 로그인한 사용자 확인
-    const currentUserId = await getCurrentUserId();
-
     // 같은 이름이 있으면 업데이트, 없으면 생성
     const updateDoc = {
       $set: {
@@ -66,14 +62,10 @@ export async function POST(request, { params }) {
       $setOnInsert: {
         eventId: new ObjectId(id),
         name: name.trim(),
+        password: null,
         createdAt: new Date(),
       },
     };
-
-    // 로그인한 사용자면 userId도 저장
-    if (currentUserId) {
-      updateDoc.$set.userId = new ObjectId(currentUserId);
-    }
 
     const result = await db.collection("participants").findOneAndUpdate(
       { eventId: new ObjectId(id), name: name.trim() },
@@ -85,11 +77,10 @@ export async function POST(request, { params }) {
       _id: result._id.toString(),
       name: result.name,
       availability: result.availability,
-      userId: result.userId?.toString() || null,
+      hasPassword: !!result.password,
     });
   } catch (error) {
     console.error("Participant save error:", error);
     return NextResponse.json({ error: "저장 실패" }, { status: 500 });
   }
 }
-

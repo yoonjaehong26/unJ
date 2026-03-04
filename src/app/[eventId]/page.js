@@ -1,5 +1,5 @@
 /**
- * 이벤트 페이지
+ * 이벤트 페이지 (When2Meet 방식)
  */
 "use client";
 
@@ -12,19 +12,19 @@ const Container = styled.main`
   max-width: 900px;
   margin: 0 auto;
   padding: 24px 20px;
-  
+
   @media (max-width: 768px) {
     padding: 16px 12px;
   }
 `;
 
-const Header = styled.header`
+const PageHeader = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
   gap: 12px;
-  
+
   @media (max-width: 768px) {
     margin-bottom: 16px;
   }
@@ -33,7 +33,7 @@ const Header = styled.header`
 const Title = styled.h1`
   font-size: 24px;
   font-weight: 600;
-  
+
   @media (max-width: 768px) {
     font-size: 20px;
   }
@@ -52,7 +52,7 @@ const CopyButton = styled.button`
   &:hover {
     border-color: var(--text-muted);
   }
-  
+
   &:active {
     background: var(--bg-tertiary);
   }
@@ -60,7 +60,7 @@ const CopyButton = styled.button`
 
 const NameSection = styled.div`
   margin-bottom: 24px;
-  
+
   @media (max-width: 768px) {
     margin-bottom: 16px;
   }
@@ -74,6 +74,12 @@ const Label = styled.label`
   color: var(--text-secondary);
 `;
 
+const NameInputRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const NameInput = styled.input`
   width: 200px;
   padding: 12px 14px;
@@ -81,17 +87,81 @@ const NameInput = styled.input`
   border-radius: 8px;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 16px; /* 모바일에서 확대 방지 */
+  font-size: 16px;
 
   &:focus {
     outline: none;
     border-color: var(--accent);
   }
-  
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
   @media (max-width: 768px) {
     width: 100%;
     max-width: 280px;
   }
+`;
+
+const JoinButton = styled.button`
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const SignOutButton = styled.button`
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--text-muted);
+    color: var(--text-secondary);
+  }
+`;
+
+const LockButton = styled.button`
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: none;
+  color: ${(props) => (props.$locked ? "var(--accent)" : "var(--text-muted)")};
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    border-color: var(--text-muted);
+    color: var(--text-secondary);
+  }
+`;
+
+const JoinedName = styled.span`
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
 `;
 
 const GridsContainer = styled.div`
@@ -145,7 +215,7 @@ const TimeFilterSection = styled.div`
   gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
-  
+
   @media (max-width: 768px) {
     gap: 6px;
   }
@@ -164,28 +234,113 @@ const TimeSelect = styled.select`
   color: var(--text-primary);
   font-size: 14px;
   cursor: pointer;
-  
+
   &:focus {
     outline: none;
     border-color: var(--accent);
   }
 `;
 
+// 비밀번호 모달
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+`;
+
+const Modal = styled.div`
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  width: 340px;
+  max-width: 90vw;
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+`;
+
+const ModalInput = styled.input`
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 16px;
+  margin-bottom: 12px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+`;
+
+const ModalButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+`;
+
+const ModalButton = styled.button`
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  border: ${(props) => (props.$primary ? "none" : "1px solid var(--border-subtle)")};
+  background: ${(props) => (props.$primary ? "var(--accent)" : "none")};
+  color: ${(props) => (props.$primary ? "white" : "var(--text-secondary)")};
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  margin-bottom: 12px;
+`;
+
 export default function EventPage({ params }) {
   const { eventId } = use(params);
-  
+
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
+
+  // 참가 상태
+  const [nameInput, setNameInput] = useState("");
+  const [joined, setJoined] = useState(false);
+  const [joinedName, setJoinedName] = useState("");
+  const [participantId, setParticipantId] = useState(null);
+  const [hasPassword, setHasPassword] = useState(false);
+
+  // 비밀번호 모달
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordModalMode, setPasswordModalMode] = useState("verify"); // "verify" | "set"
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [pendingJoinName, setPendingJoinName] = useState("");
+
   const [myAvailability, setMyAvailability] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [saving, setSaving] = useState(false);
   const [viewStartTime, setViewStartTime] = useState(null);
   const [viewEndTime, setViewEndTime] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [previousName, setPreviousName] = useState("");
-  
-  // 디바운스용 타이머
+
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
 
@@ -213,16 +368,31 @@ export default function EventPage({ params }) {
     load();
   }, [eventId]);
 
-  // 5초마다 참가자 데이터 폴링 (실시간 협업)
-  // 내 데이터는 덮어쓰지 않음 (깜빡임 방지)
+  // localStorage에서 참가 상태 복원 → 자동 join
+  useEffect(() => {
+    if (loading || joined) return;
+
+    const saved = localStorage.getItem(`unj-participant-${eventId}`);
+    if (saved) {
+      try {
+        const { name } = JSON.parse(saved);
+        if (name) {
+          handleJoin(name);
+        }
+      } catch {
+        localStorage.removeItem(`unj-participant-${eventId}`);
+      }
+    }
+  }, [loading, eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 5초마다 참가자 데이터 폴링
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/events/${eventId}/participants`);
         if (res.ok) {
           const data = await res.json();
-          // 내 이름이 있으면 다른 참가자 데이터만 업데이트
-          const currentName = name.trim();
+          const currentName = joinedName;
           if (currentName) {
             setParticipants((prev) => {
               const others = data.filter((p) => p.name !== currentName);
@@ -239,26 +409,65 @@ export default function EventPage({ params }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [eventId, name]);
+  }, [eventId, joinedName]);
 
-  // 로컬스토리지에서 내 이름 복원
-  useEffect(() => {
-    const savedName = localStorage.getItem(`unj-name-${eventId}`);
-    if (savedName) {
-      setName(savedName);
-      // 이름이 있으면 해당 참가자의 가용시간 로드
-      const participant = participants.find((p) => p.name === savedName);
-      if (participant) {
-        setMyAvailability(participant.availability || []);
+  // join API 호출
+  const handleJoin = useCallback(async (name, password) => {
+    const trimmed = (name || nameInput).trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, password }),
+      });
+
+      const data = await res.json();
+
+      if (data.status === "password_required") {
+        setPendingJoinName(trimmed);
+        setPasswordModalMode("verify");
+        setPasswordInput("");
+        setPasswordError("");
+        setShowPasswordModal(true);
+        return;
       }
+
+      if (data.status === "error") {
+        setPasswordError(data.message);
+        return;
+      }
+
+      if (data.status === "ok") {
+        setJoined(true);
+        setJoinedName(data.name);
+        setParticipantId(data.participantId);
+        setHasPassword(data.hasPassword);
+        setMyAvailability(data.availability || []);
+        setShowPasswordModal(false);
+
+        // 참가자 목록에 반영
+        setParticipants((prev) => {
+          const others = prev.filter((p) => p.name !== data.name);
+          return [...others, { _id: data.participantId, name: data.name, availability: data.availability || [] }];
+        });
+
+        // localStorage에 저장
+        localStorage.setItem(
+          `unj-participant-${eventId}`,
+          JSON.stringify({ name: data.name })
+        );
+      }
+    } catch (error) {
+      console.error("Join error:", error);
     }
-  }, [eventId, participants]);
+  }, [eventId, nameInput]);
 
   // 실제 저장 함수
   const doSave = useCallback(async (availability) => {
-    const currentName = name.trim();
-    if (!currentName) return;
-    
+    if (!joinedName) return;
+
     setSaving(true);
 
     try {
@@ -266,17 +475,15 @@ export default function EventPage({ params }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: currentName,
+          name: joinedName,
           availability: availability,
         }),
       });
 
       if (res.ok) {
-        // 저장 성공 시 로컬 상태만 업데이트 (다시 fetch 안 함)
-        // 내 데이터를 participants에 반영
         setParticipants((prev) => {
-          const others = prev.filter((p) => p.name !== currentName);
-          const myData = { name: currentName, availability };
+          const others = prev.filter((p) => p.name !== joinedName);
+          const myData = { _id: participantId, name: joinedName, availability };
           return [...others, myData];
         });
       } else {
@@ -287,39 +494,35 @@ export default function EventPage({ params }) {
     } finally {
       setSaving(false);
     }
-  }, [eventId, name]);
+  }, [eventId, joinedName, participantId]);
 
-  // 디바운스된 저장 (드래그 끝난 후 500ms 후에 저장)
+  // 디바운스된 저장
   const saveAvailabilityDebounced = useCallback((newAvailability) => {
-    if (!name.trim()) return;
-    
-    localStorage.setItem(`unj-name-${eventId}`, name.trim());
+    if (!joinedName) return;
+
     pendingAvailabilityRef.current = newAvailability;
-    
-    // 기존 타이머 취소
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    
-    // 500ms 후에 저장
+
     saveTimeoutRef.current = setTimeout(() => {
       if (pendingAvailabilityRef.current) {
         doSave(pendingAvailabilityRef.current);
         pendingAvailabilityRef.current = null;
       }
     }, 500);
-  }, [name, eventId, doSave]);
+  }, [joinedName, doSave]);
 
-  // 컴포넌트 언마운트 시 저장 (sendBeacon으로 확실하게)
+  // 컴포넌트 언마운트 시 저장
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      if (pendingAvailabilityRef.current && name.trim()) {
-        // sendBeacon으로 페이지 떠나도 저장 보장
+      if (pendingAvailabilityRef.current && joinedName) {
         const payload = JSON.stringify({
-          name: name.trim(),
+          name: joinedName,
           availability: pendingAvailabilityRef.current,
         });
         navigator.sendBeacon(
@@ -328,7 +531,7 @@ export default function EventPage({ params }) {
         );
       }
     };
-  }, [eventId, name]);
+  }, [eventId, joinedName]);
 
   const handleAvailabilityChange = (newAvailability) => {
     setMyAvailability(newAvailability);
@@ -341,7 +544,6 @@ export default function EventPage({ params }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = window.location.href;
       document.body.appendChild(textArea);
@@ -353,23 +555,66 @@ export default function EventPage({ params }) {
     }
   };
 
-  // 이름 변경 시 저장
-  const handleNameChange = (e) => {
-    const newName = e.target.value;
-    setName(newName);
+  // 이름 입력 후 참가
+  const handleNameSubmit = (e) => {
+    e.preventDefault();
+    handleJoin();
   };
 
-  // 이름 입력 완료 시 (blur) 저장
-  const handleNameBlur = () => {
-    const trimmedName = name.trim();
-    if (trimmedName && trimmedName !== previousName) {
-      localStorage.setItem(`unj-name-${eventId}`, trimmedName);
-      setPreviousName(trimmedName);
-      // 가용시간이 있으면 새 이름으로 저장
-      if (myAvailability.length > 0) {
-        doSave(myAvailability);
-      }
+  // 로그아웃 (이 방에서 나가기)
+  const handleSignOut = () => {
+    setJoined(false);
+    setJoinedName("");
+    setParticipantId(null);
+    setHasPassword(false);
+    setMyAvailability([]);
+    setNameInput("");
+    localStorage.removeItem(`unj-participant-${eventId}`);
+  };
+
+  // 비밀번호 설정
+  const handleSetPassword = async () => {
+    if (!passwordInput || passwordInput.length < 4) {
+      setPasswordError("비밀번호는 4자 이상이어야 합니다");
+      return;
     }
+
+    try {
+      const res = await fetch(
+        `/api/events/${eventId}/participants/${participantId}/password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: passwordInput }),
+        }
+      );
+
+      if (res.ok) {
+        setHasPassword(true);
+        setShowPasswordModal(false);
+        setPasswordInput("");
+        setPasswordError("");
+      } else {
+        const data = await res.json();
+        setPasswordError(data.error || "설정 실패");
+      }
+    } catch (error) {
+      console.error("Set password error:", error);
+      setPasswordError("비밀번호 설정 실패");
+    }
+  };
+
+  // 비밀번호 검증 후 참가
+  const handleVerifyPassword = () => {
+    handleJoin(pendingJoinName, passwordInput);
+  };
+
+  // 비밀번호 설정 모달 열기
+  const openSetPasswordModal = () => {
+    setPasswordModalMode("set");
+    setPasswordInput("");
+    setPasswordError("");
+    setShowPasswordModal(true);
   };
 
   if (loading) {
@@ -382,17 +627,17 @@ export default function EventPage({ params }) {
 
   return (
     <Container>
-      <Header>
+      <PageHeader>
         <Title>{event.name}</Title>
         <CopyButton onClick={handleCopyLink}>
           {copied ? "✓ 복사됨" : "링크 복사"}
         </CopyButton>
-      </Header>
+      </PageHeader>
 
       <TimeFilterSection>
         <TimeFilterLabel>시간 범위:</TimeFilterLabel>
-        <TimeSelect 
-          value={viewStartTime ?? event.startTime} 
+        <TimeSelect
+          value={viewStartTime ?? event.startTime}
           onChange={(e) => setViewStartTime(Number(e.target.value))}
         >
           {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i).map((h) => (
@@ -400,8 +645,8 @@ export default function EventPage({ params }) {
           ))}
         </TimeSelect>
         <span>~</span>
-        <TimeSelect 
-          value={viewEndTime ?? event.endTime} 
+        <TimeSelect
+          value={viewEndTime ?? event.endTime}
           onChange={(e) => setViewEndTime(Number(e.target.value))}
         >
           {Array.from({ length: event.endTime - event.startTime }, (_, i) => event.startTime + i + 1).map((h) => (
@@ -411,17 +656,43 @@ export default function EventPage({ params }) {
       </TimeFilterSection>
 
       <NameSection>
-        <Label>
-          내 이름
-          {saving && <SaveStatus>저장 중...</SaveStatus>}
-        </Label>
-        <NameInput
-          type="text"
-          placeholder="이름을 입력하세요"
-          value={name}
-          onChange={handleNameChange}
-          onBlur={handleNameBlur}
-        />
+        {!joined ? (
+          <>
+            <Label>이름을 입력하여 참가하세요</Label>
+            <form onSubmit={handleNameSubmit}>
+              <NameInputRow>
+                <NameInput
+                  type="text"
+                  placeholder="이름"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  autoFocus
+                />
+                <JoinButton type="submit" disabled={!nameInput.trim()}>
+                  참가
+                </JoinButton>
+              </NameInputRow>
+            </form>
+          </>
+        ) : (
+          <>
+            <Label>
+              참가자
+              {saving && <SaveStatus>저장 중...</SaveStatus>}
+            </Label>
+            <NameInputRow>
+              <JoinedName>{joinedName}</JoinedName>
+              <LockButton
+                $locked={hasPassword}
+                onClick={hasPassword ? undefined : openSetPasswordModal}
+                title={hasPassword ? "비밀번호 설정됨" : "비밀번호 설정"}
+              >
+                {hasPassword ? "🔒" : "🔓"} {hasPassword ? "잠금" : "비밀번호 설정"}
+              </LockButton>
+              <SignOutButton onClick={handleSignOut}>나가기</SignOutButton>
+            </NameInputRow>
+          </>
+        )}
       </NameSection>
 
       <GridsContainer>
@@ -431,7 +702,7 @@ export default function EventPage({ params }) {
           endTime={viewEndTime ?? event.endTime}
           availability={myAvailability}
           onChange={handleAvailabilityChange}
-          readOnly={!name.trim()}
+          readOnly={!joined}
         />
 
         <GroupResultGrid
@@ -456,6 +727,65 @@ export default function EventPage({ params }) {
           )}
         </ParticipantList>
       </Participants>
+
+      {/* 비밀번호 모달 */}
+      {showPasswordModal && (
+        <Overlay onClick={() => setShowPasswordModal(false)}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            {passwordModalMode === "verify" ? (
+              <>
+                <ModalTitle>비밀번호 입력</ModalTitle>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px" }}>
+                  &quot;{pendingJoinName}&quot; 이름에 비밀번호가 설정되어 있습니다.
+                </p>
+                {passwordError && <ErrorText>{passwordError}</ErrorText>}
+                <form onSubmit={(e) => { e.preventDefault(); handleVerifyPassword(); }}>
+                  <ModalInput
+                    type="password"
+                    placeholder="비밀번호"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    autoFocus
+                  />
+                  <ModalButtons>
+                    <ModalButton type="button" onClick={() => setShowPasswordModal(false)}>
+                      취소
+                    </ModalButton>
+                    <ModalButton $primary type="submit" disabled={!passwordInput}>
+                      확인
+                    </ModalButton>
+                  </ModalButtons>
+                </form>
+              </>
+            ) : (
+              <>
+                <ModalTitle>비밀번호 설정</ModalTitle>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px" }}>
+                  다른 기기에서 접속할 때 본인 확인을 위해 비밀번호를 설정하세요.
+                </p>
+                {passwordError && <ErrorText>{passwordError}</ErrorText>}
+                <form onSubmit={(e) => { e.preventDefault(); handleSetPassword(); }}>
+                  <ModalInput
+                    type="password"
+                    placeholder="비밀번호 (4자 이상)"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    autoFocus
+                  />
+                  <ModalButtons>
+                    <ModalButton type="button" onClick={() => setShowPasswordModal(false)}>
+                      취소
+                    </ModalButton>
+                    <ModalButton $primary type="submit" disabled={!passwordInput || passwordInput.length < 4}>
+                      설정
+                    </ModalButton>
+                  </ModalButtons>
+                </form>
+              </>
+            )}
+          </Modal>
+        </Overlay>
+      )}
     </Container>
   );
 }

@@ -1,6 +1,5 @@
 import StyledComponentsRegistry from "@/lib/registry";
 import GlobalStyles from "@/styles/GlobalStyles";
-import { AuthProvider } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import "./globals.css";
 
@@ -14,11 +13,9 @@ export default function RootLayout({ children }) {
     <html lang="ko">
       <body>
         <StyledComponentsRegistry>
-          <AuthProvider>
-            <GlobalStyles />
-            <Header />
-            {children}
-          </AuthProvider>
+          <GlobalStyles />
+          <Header />
+          {children}
         </StyledComponentsRegistry>
       </body>
     </html>
