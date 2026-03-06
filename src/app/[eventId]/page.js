@@ -191,18 +191,41 @@ const ParticipantList = styled.div`
 `;
 
 const ParticipantTag = styled.button`
+  position: relative;
   padding: 4px 10px;
-  background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
-  color: ${(props) => (props.$active ? "white" : "var(--text-primary)")};
-  border: 1px solid ${(props) => (props.$active ? "var(--accent)" : "transparent")};
+  background: ${(props) => props.$hidden ? "transparent" : props.$active ? "var(--accent)" : "var(--bg-secondary)"};
+  color: ${(props) => props.$hidden ? "var(--text-muted)" : props.$active ? "white" : "var(--text-primary)"};
+  border: 1px solid ${(props) => props.$hidden ? "var(--border-subtle)" : props.$active ? "var(--accent)" : "transparent"};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
+  text-decoration: ${(props) => props.$hidden ? "line-through" : "none"};
 
   &:hover {
     border-color: var(--accent);
   }
+`;
+
+const HideToggle = styled.span`
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
 `;
 
 const Loading = styled.div`
@@ -349,6 +372,18 @@ export default function EventPage({ params }) {
   const [viewEndTime, setViewEndTime] = useState(null);
   const [copied, setCopied] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState(null);
+  const [hiddenNames, setHiddenNames] = useState(new Set());
+
+  const toggleHidden = (name) => {
+    setHiddenNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const visibleParticipants = participants.filter((p) => !hiddenNames.has(p.name));
 
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
@@ -715,10 +750,21 @@ export default function EventPage({ params }) {
             participants.map((p, index) => (
               <ParticipantTag
                 key={p._id || p.name || index}
-                $active={selectedParticipant?.name === p.name}
-                onClick={() => setSelectedParticipant(selectedParticipant?.name === p.name ? null : p)}
+                $active={!hiddenNames.has(p.name) && selectedParticipant?.name === p.name}
+                $hidden={hiddenNames.has(p.name)}
+                data-hidden={hiddenNames.has(p.name)}
+                onClick={() => !hiddenNames.has(p.name) && setSelectedParticipant(selectedParticipant?.name === p.name ? null : p)}
               >
                 {p.name}
+                <HideToggle
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleHidden(p.name);
+                    if (selectedParticipant?.name === p.name) setSelectedParticipant(null);
+                  }}
+                >
+                  {hiddenNames.has(p.name) ? "+" : "−"}
+                </HideToggle>
               </ParticipantTag>
             ))
           )}
@@ -739,7 +785,7 @@ export default function EventPage({ params }) {
           dates={event.dates}
           startTime={viewStartTime ?? event.startTime}
           endTime={viewEndTime ?? event.endTime}
-          participants={participants}
+          participants={visibleParticipants}
           selectedParticipant={selectedParticipant}
         />
       </GridsContainer>
