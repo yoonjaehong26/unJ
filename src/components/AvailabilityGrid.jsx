@@ -182,6 +182,12 @@ export default function AvailabilityGrid({
   const [selectionMode, setSelectionMode] = useState("available");
   const gridRef = useRef(null);
 
+  // 탭 vs 드래그 구분용 refs
+  const touchStartPosRef = useRef(null);
+  const touchHasDraggedRef = useRef(false);
+  const touchStartSlotRef = useRef(null);
+  const startDragRef = useRef(null);
+
   const colKeys = Array.from({ length: 7 }, (_, i) => i); // 0-6
 
   const hours = [];
@@ -268,24 +274,54 @@ export default function AvailabilityGrid({
   const handleMouseEnter = (colKey, hour, minute) => continueDrag(colKey, hour, minute);
   const handleMouseUp = () => endDrag();
 
+  // startDrag를 ref로 항상 최신 버전 유지 (useEffect 클로저 문제 방지)
+  startDragRef.current = startDrag;
+
   const handleTouchStart = (e, colKey, hour, minute) => {
     e.preventDefault();
-    startDrag(colKey, hour, minute);
+    touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    touchHasDraggedRef.current = false;
+    touchStartSlotRef.current = { colKey, hour, minute };
+    // 탭인지 드래그인지 모르므로 여기서 바로 startDrag 하지 않음
   };
 
-  const handleTouchEnd = () => endDrag();
+  const handleTouchEnd = () => {
+    // 드래그가 없었으면 단일 탭 → 해당 셀 토글
+    if (!touchHasDraggedRef.current && touchStartSlotRef.current) {
+      const { colKey, hour, minute } = touchStartSlotRef.current;
+      startDragRef.current(colKey, hour, minute);
+    }
+    endDrag();
+    touchStartPosRef.current = null;
+    touchHasDraggedRef.current = false;
+    touchStartSlotRef.current = null;
+  };
 
   React.useEffect(() => {
     const container = gridRef.current;
     if (!container) return;
 
     const handleTouchMove = (e) => {
-      if (!isDragging) return;
       e.preventDefault();
 
       const touch = e.touches[0];
-      const element = document.elementFromPoint(touch.clientX, touch.clientY);
 
+      // 아직 드래그 시작 전 → 이동량 체크해서 드래그 시작 여부 결정
+      if (!touchHasDraggedRef.current && touchStartPosRef.current) {
+        const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+        const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+        if (dx > 5 || dy > 5) {
+          touchHasDraggedRef.current = true;
+          const { colKey, hour, minute } = touchStartSlotRef.current;
+          startDragRef.current(colKey, hour, minute); // 드래그 시작 (첫 셀 토글)
+        }
+        return;
+      }
+
+      // 드래그 중 → 셀 연속 선택
+      if (!touchHasDraggedRef.current) return;
+
+      const element = document.elementFromPoint(touch.clientX, touch.clientY);
       if (element && element.dataset.slot) {
         const [colKey, hour, minute] = element.dataset.slot.split("-").map(Number);
         continueDrag(colKey, hour, minute);
