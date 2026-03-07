@@ -1,5 +1,5 @@
 /**
- * 홈페이지 - 이벤트 생성 (주간 선택으로 단순화)
+ * 홈페이지 - 이벤트 생성 + 내 일정 관리
  */
 "use client";
 
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import WeekSelector, { getWeekDates } from "@/components/WeekSelector";
 import TimeRangePicker from "@/components/TimeRangePicker";
+import MyScheduleSection from "@/components/MyScheduleSection";
 
 const Container = styled.main`
   max-width: 520px;
@@ -67,7 +68,7 @@ const TopRow = styled.div`
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
-  
+
   @media (max-width: 480px) {
     flex-direction: column;
   }
@@ -180,7 +181,8 @@ export default function Home() {
           {loading ? "생성 중..." : "이벤트 만들기"}
         </Button>
       </Form>
+
+      <MyScheduleSection />
     </Container>
   );
 }
-

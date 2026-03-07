@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback, use } from "react";
 import styled from "styled-components";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import GroupResultGrid from "@/components/GroupResultGrid";
+import ScheduleImportExport from "@/components/ScheduleImportExport";
 
 const Container = styled.main`
   max-width: 900px;
@@ -789,6 +790,15 @@ export default function EventPage({ params }) {
           selectedParticipant={selectedParticipant}
         />
       </GridsContainer>
+
+      {/* 내 일정 Import/Export 플로팅 버튼 */}
+      {joined && (
+        <ScheduleImportExport
+          event={event}
+          myAvailability={myAvailability}
+          onImport={handleAvailabilityChange}
+        />
+      )}
 
       {/* 비밀번호 모달 */}
       {showPasswordModal && (
