@@ -194,7 +194,7 @@ const HalfHourCell = styled.div`
 
     if (available > 0 && anyFlexible > 0) {
       const greenIntensity = Math.min(available / props.$total, 1);
-      const flexColor = maybe > 0 ? "245, 166, 35" : "136, 136, 136";
+      const flexColor = maybe > 0 ? "245, 166, 35" : "83, 195, 243";
       const flexIntensity = Math.min(anyFlexible / props.$total, 1);
       return `linear-gradient(90deg,
         rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%,
@@ -205,7 +205,7 @@ const HalfHourCell = styled.div`
 
     if (onlineOnly > 0 && maybe === 0) {
       const intensity = Math.min(onlineOnly / props.$total, 1);
-      return `rgba(136, 136, 136, ${0.3 + intensity * 0.7})`;
+      return `rgba(83, 195, 243, ${0.3 + intensity * 0.7})`;
     }
 
     if (maybe > 0) {
@@ -400,7 +400,9 @@ export default function GroupResultGrid({
       for (let i = startIdx; i < startIdx + minSlots; i++) {
         if (i >= totalSlots) { enoughTotal = false; break; }
         const { hour: h, minute: m } = indexToSlot(i);
-        if (getCounts(dateIdx, h, m).total < requiredPeople) { enoughTotal = false; break; }
+        const c = getCounts(dateIdx, h, m);
+        // 온라인만가능(onlineOnly)은 조정가능 카운트에 포함하지 않음
+        if (c.available + c.maybe < requiredPeople) { enoughTotal = false; break; }
       }
       if (enoughTotal) return true;
     }
@@ -548,7 +550,7 @@ export default function GroupResultGrid({
           <span>조정가능</span>
         </LegendItem>
         <LegendItem>
-          <LegendColor $color="rgba(136, 136, 136, 0.7)" />
+          <LegendColor $color="rgba(83, 195, 243, 0.7)" />
           <span>온라인만가능</span>
         </LegendItem>
         {totalParticipants >= 2 && (
@@ -652,7 +654,7 @@ export default function GroupResultGrid({
             </div>
           )}
           {tooltip.onlineOnlyNames.length > 0 && (
-            <div style={{ marginTop: 4, color: "#aaaaaa" }}>
+            <div style={{ marginTop: 4, color: "#53C3F3" }}>
               온라인만가능 ({tooltip.onlineOnlyNames.length}): {tooltip.onlineOnlyNames.join(", ")}
             </div>
           )}
