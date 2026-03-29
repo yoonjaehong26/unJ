@@ -46,6 +46,29 @@ const ModeToggle = styled.div`
   padding: 3px;
 `;
 
+const SubToggle = styled.div`
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  justify-content: flex-end;
+`;
+
+const SubButton = styled.button`
+  padding: 3px 10px;
+  border: 1px solid ${(props) => (props.$active ? props.$color : "var(--border-subtle)")};
+  border-radius: 4px;
+  background: ${(props) => (props.$active ? props.$color + "22" : "transparent")};
+  color: ${(props) => (props.$active ? props.$color : "var(--text-muted)")};
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: ${(props) => props.$color};
+    color: ${(props) => props.$color};
+  }
+`;
+
 const ModeButton = styled.button`
   display: flex;
   align-items: center;
@@ -136,8 +159,8 @@ const HalfHourCell = styled.div`
   height: 23px;
   background: ${(props) => {
     if (props.$status === "available") return "var(--accent)";
-    if (props.$status === "online") return "#2196F3";
-    if (props.$status === "offline") return "#FF7043";
+    if (props.$status === "online") return "#F5A623";
+    if (props.$status === "offline") return "#E09000";
     if (props.$status === "maybe") return "#F5A623";
     return "var(--bg-secondary)";
   }};
@@ -182,6 +205,8 @@ export default function AvailabilityGrid({
   const [dragColumn, setDragColumn] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [selectionMode, setSelectionMode] = useState("available");
+  // "online" | "offline" — 조정가능 선택 시 세부 구분
+  const [flexSubMode, setFlexSubMode] = useState("online");
   const gridRef = useRef(null);
 
   // 탭 vs 드래그 구분용 refs
@@ -355,29 +380,42 @@ export default function AvailabilityGrid({
       <Header>
         <GridTitle>{title}</GridTitle>
         {!readOnly && (
-          <ModeToggle>
-            <ModeButton
-              $active={selectionMode === "available"}
-              $color="var(--accent)"
-              onClick={() => setSelectionMode("available")}
-            >
-              가능
-            </ModeButton>
-            <ModeButton
-              $active={selectionMode === "online"}
-              $color="#2196F3"
-              onClick={() => setSelectionMode("online")}
-            >
-              온라인
-            </ModeButton>
-            <ModeButton
-              $active={selectionMode === "offline"}
-              $color="#FF7043"
-              onClick={() => setSelectionMode("offline")}
-            >
-              오프라인
-            </ModeButton>
-          </ModeToggle>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <ModeToggle>
+              <ModeButton
+                $active={selectionMode === "available"}
+                $color="var(--accent)"
+                onClick={() => setSelectionMode("available")}
+              >
+                가능
+              </ModeButton>
+              <ModeButton
+                $active={selectionMode === "online" || selectionMode === "offline"}
+                $color="#F5A623"
+                onClick={() => setSelectionMode(flexSubMode)}
+              >
+                조정가능
+              </ModeButton>
+            </ModeToggle>
+            {(selectionMode === "online" || selectionMode === "offline") && (
+              <SubToggle>
+                <SubButton
+                  $active={flexSubMode === "online"}
+                  $color="#2196F3"
+                  onClick={() => { setFlexSubMode("online"); setSelectionMode("online"); }}
+                >
+                  온라인
+                </SubButton>
+                <SubButton
+                  $active={flexSubMode === "offline"}
+                  $color="#FF7043"
+                  onClick={() => { setFlexSubMode("offline"); setSelectionMode("offline"); }}
+                >
+                  오프라인
+                </SubButton>
+              </SubToggle>
+            )}
+          </div>
         )}
       </Header>
 

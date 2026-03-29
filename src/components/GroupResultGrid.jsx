@@ -539,7 +539,7 @@ export default function GroupResultGrid({
         </LegendItem>
         <LegendItem>
           <LegendColor $color="rgba(245, 166, 35, 0.7)" />
-          <span>온/오프라인</span>
+          <span>조정가능</span>
         </LegendItem>
         {totalParticipants >= 2 && (
           <LegendItem>
