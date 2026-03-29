@@ -136,6 +136,21 @@ const LegendColor = styled.div`
   `}
 `;
 
+const LegendGradientBar = styled.div`
+  width: 48px;
+  height: 14px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--bg-secondary) 0%, rgba(76,175,80,1) 100%);
+`;
+
+const LegendBorderBox = styled.div`
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(76, 175, 80, 0.7);
+  box-shadow: inset 0 0 0 2px #FFFFFF;
+`;
+
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 50px repeat(7, minmax(40px, 1fr));
@@ -557,16 +572,8 @@ export default function GroupResultGrid({
 
       <Legend>
         <LegendItem>
-          <LegendColor $color="var(--bg-secondary)" />
-          <span>0명</span>
-        </LegendItem>
-        <LegendItem>
-          <LegendColor $color="rgba(76, 175, 80, 0.4)" />
-          <span>일부</span>
-        </LegendItem>
-        <LegendItem>
-          <LegendColor $color="rgba(76, 175, 80, 1)" />
-          <span>전원</span>
+          <LegendGradientBar />
+          <span>0 · · · {totalParticipants}명</span>
         </LegendItem>
         <LegendItem>
           <LegendColor $color="rgba(245, 166, 35, 0.7)" />
@@ -578,7 +585,7 @@ export default function GroupResultGrid({
         </LegendItem>
         {totalParticipants >= 2 && (
           <LegendItem>
-            <LegendColor $color="rgba(76, 175, 80, 0.9)" $border="rgba(255,255,255,0.85)" />
+            <LegendBorderBox />
             <span>전원 가능</span>
           </LegendItem>
         )}
