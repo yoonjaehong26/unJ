@@ -409,12 +409,32 @@ export default function GroupResultGrid({
     return false;
   };
 
+  // 온라인만가능 포함 전체 합산 연속 체크 (파란 테두리용)
+  const isHighlightedBlue = (dateIdx, hour, minute) => {
+    if (minSlots === 0) return false;
+    if (requiredPeople === 0) return false;
+
+    const currentIdx = slotToIndex(hour, minute);
+
+    for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
+      let enough = true;
+      for (let i = startIdx; i < startIdx + minSlots; i++) {
+        if (i >= totalSlots) { enough = false; break; }
+        const { hour: h, minute: m } = indexToSlot(i);
+        if (getCounts(dateIdx, h, m).total < requiredPeople) { enough = false; break; }
+      }
+      if (enough) return true;
+    }
+    return false;
+  };
+
   const getBorderInfo = (dateIdx, hour, minute) => {
     const isGreen = isHighlightedGreen(dateIdx, hour, minute);
     const isYellow = isHighlightedYellow(dateIdx, hour, minute);
+    const isBlue = !isYellow && isHighlightedBlue(dateIdx, hour, minute);
     const allAvail = isAllAvailable(dateIdx, hour, minute);
 
-    if (!isGreen && !isYellow && !allAvail) {
+    if (!isGreen && !isYellow && !isBlue && !allAvail) {
       return { borderTop: false, borderBottom: false, borderSides: false, borderColor: null };
     }
 
@@ -427,6 +447,9 @@ export default function GroupResultGrid({
     } else if (isYellow) {
       borderColor = '#FFD600';
       checkFn = (d, h, m) => isHighlightedYellow(d, h, m);
+    } else if (isBlue) {
+      borderColor = '#53C3F3';
+      checkFn = (d, h, m) => !isHighlightedYellow(d, h, m) && isHighlightedBlue(d, h, m);
     } else {
       // 전원 가능 default border
       borderColor = '#FFFFFF';
