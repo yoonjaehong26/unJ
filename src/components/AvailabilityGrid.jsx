@@ -159,7 +159,8 @@ const HalfHourCell = styled.div`
   height: 23px;
   background: ${(props) => {
     if (props.$status === "available") return "var(--accent)";
-    if (props.$status === "online" || props.$status === "offline" || props.$status === "maybe") return "#F5A623";
+    if (props.$status === "online") return "#888888";
+    if (props.$status === "offline" || props.$status === "maybe") return "#F5A623";
     return "var(--bg-secondary)";
   }};
   cursor: pointer;
@@ -381,7 +382,6 @@ export default function AvailabilityGrid({
           const flexLabels = {
             maybe: "조정가능",
             online: "온라인만가능",
-            offline: "오프라인만가능",
           };
           const isFlexActive = selectionMode !== "available";
           return (
@@ -396,7 +396,7 @@ export default function AvailabilityGrid({
                 </ModeButton>
                 <ModeButton
                   $active={isFlexActive}
-                  $color="#F5A623"
+                  $color={flexType === "online" ? "#888888" : "#F5A623"}
                   onClick={() => setSelectionMode(flexType)}
                 >
                   {flexLabels[flexType]}
@@ -407,7 +407,7 @@ export default function AvailabilityGrid({
                   <SubButton
                     key={key}
                     $active={flexType === key}
-                    $color="#F5A623"
+                    $color={key === "online" ? "#888888" : "#F5A623"}
                     onClick={() => { setFlexType(key); setSelectionMode(key); }}
                   >
                     {label}

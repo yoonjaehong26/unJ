@@ -187,17 +187,25 @@ const HalfHourCell = styled.div`
   background: ${(props) => {
     const available = props.$available || 0;
     const maybe = props.$maybe || 0;
-    const total = available + maybe;
+    const onlineOnly = props.$onlineOnly || 0;
+    const anyFlexible = maybe + onlineOnly;
+    const total = available + anyFlexible;
     if (total === 0) return "var(--bg-secondary)";
 
-    if (available > 0 && maybe > 0) {
+    if (available > 0 && anyFlexible > 0) {
       const greenIntensity = Math.min(available / props.$total, 1);
-      const yellowIntensity = Math.min(maybe / props.$total, 1);
+      const flexColor = maybe > 0 ? "245, 166, 35" : "136, 136, 136";
+      const flexIntensity = Math.min(anyFlexible / props.$total, 1);
       return `linear-gradient(90deg,
         rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%,
         rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 50%,
-        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 50%,
-        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 100%)`;
+        rgba(${flexColor}, ${0.3 + flexIntensity * 0.7}) 50%,
+        rgba(${flexColor}, ${0.3 + flexIntensity * 0.7}) 100%)`;
+    }
+
+    if (onlineOnly > 0 && maybe === 0) {
+      const intensity = Math.min(onlineOnly / props.$total, 1);
+      return `rgba(136, 136, 136, ${0.3 + intensity * 0.7})`;
     }
 
     if (maybe > 0) {
@@ -310,34 +318,32 @@ export default function GroupResultGrid({
   // flexible = online + offline + maybe(backward compat)
   const getCounts = (dateIdx, hour, minute) => {
     let available = 0;
-    let maybe = 0;
+    let maybe = 0;   // 조정가능 (yellow)
+    let onlineOnly = 0; // 온라인만가능 (gray)
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
-        if (slot.status === "available") {
-          available++;
-        } else {
-          maybe++; // online, offline, maybe all count as flexible
-        }
+        if (slot.status === "available") available++;
+        else if (slot.status === "online") onlineOnly++;
+        else maybe++; // offline, maybe (backward compat) → 조정가능
       }
     });
-    return { available, maybe, total: available + maybe };
+    return { available, maybe, onlineOnly, total: available + maybe + onlineOnly };
   };
 
   const getParticipantInfo = (dateIdx, hour, minute) => {
     const availableNames = [];
-    const onlineNames = [];
-    const offlineNames = [];
+    const maybeNames = [];
+    const onlineOnlyNames = [];
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
         if (slot.status === "available") availableNames.push(p.name);
-        else if (slot.status === "online") onlineNames.push(p.name);
-        else if (slot.status === "offline") offlineNames.push(p.name);
-        else onlineNames.push(p.name); // maybe backward compat → online
+        else if (slot.status === "online") onlineOnlyNames.push(p.name);
+        else maybeNames.push(p.name); // offline, maybe → 조정가능
       }
     });
-    return { availableNames, onlineNames, offlineNames };
+    return { availableNames, maybeNames, onlineOnlyNames };
   };
 
   // 전원 가능 (available only) 여부
@@ -448,14 +454,14 @@ export default function GroupResultGrid({
   };
 
   const handleMouseEnter = (e, dateIdx, hour, minute) => {
-    const { availableNames, onlineNames, offlineNames } = getParticipantInfo(dateIdx, hour, minute);
-    if (availableNames.length > 0 || onlineNames.length > 0 || offlineNames.length > 0) {
+    const { availableNames, maybeNames, onlineOnlyNames } = getParticipantInfo(dateIdx, hour, minute);
+    if (availableNames.length > 0 || maybeNames.length > 0 || onlineOnlyNames.length > 0) {
       setTooltip({
         x: e.clientX + 10,
         y: e.clientY + 10,
         availableNames,
-        onlineNames,
-        offlineNames,
+        maybeNames,
+        onlineOnlyNames,
         time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
       });
     }
@@ -541,6 +547,10 @@ export default function GroupResultGrid({
           <LegendColor $color="rgba(245, 166, 35, 0.7)" />
           <span>조정가능</span>
         </LegendItem>
+        <LegendItem>
+          <LegendColor $color="rgba(136, 136, 136, 0.7)" />
+          <span>온라인만가능</span>
+        </LegendItem>
         {totalParticipants >= 2 && (
           <LegendItem>
             <LegendColor $color="rgba(76, 175, 80, 0.9)" $border="rgba(255,255,255,0.85)" />
@@ -580,6 +590,7 @@ export default function GroupResultGrid({
                   <HalfHourCell
                     $available={counts00.available}
                     $maybe={counts00.maybe}
+                    $onlineOnly={counts00.onlineOnly}
                     $total={totalParticipants}
                     $borderTop={border00.borderTop}
                     $borderBottom={border00.borderBottom}
@@ -591,16 +602,17 @@ export default function GroupResultGrid({
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {counts00.available > 0 && counts00.maybe > 0 ? (
+                    {counts00.available > 0 && (counts00.maybe + counts00.onlineOnly) > 0 ? (
                       <SplitContent>
                         <SplitNumber>{counts00.available}</SplitNumber>
-                        <SplitNumber>{counts00.maybe}</SplitNumber>
+                        <SplitNumber>{counts00.maybe + counts00.onlineOnly}</SplitNumber>
                       </SplitContent>
                     ) : counts00.total > 0 ? counts00.total : ""}
                   </HalfHourCell>
                   <HalfHourCell
                     $available={counts30.available}
                     $maybe={counts30.maybe}
+                    $onlineOnly={counts30.onlineOnly}
                     $total={totalParticipants}
                     $borderTop={border30.borderTop}
                     $borderBottom={border30.borderBottom}
@@ -612,10 +624,10 @@ export default function GroupResultGrid({
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
                   >
-                    {counts30.available > 0 && counts30.maybe > 0 ? (
+                    {counts30.available > 0 && (counts30.maybe + counts30.onlineOnly) > 0 ? (
                       <SplitContent>
                         <SplitNumber>{counts30.available}</SplitNumber>
-                        <SplitNumber>{counts30.maybe}</SplitNumber>
+                        <SplitNumber>{counts30.maybe + counts30.onlineOnly}</SplitNumber>
                       </SplitContent>
                     ) : counts30.total > 0 ? counts30.total : ""}
                   </HalfHourCell>
@@ -634,14 +646,14 @@ export default function GroupResultGrid({
               가능 ({tooltip.availableNames.length}): {tooltip.availableNames.join(", ")}
             </div>
           )}
-          {tooltip.onlineNames.length > 0 && (
-            <div style={{ marginTop: 4, color: "#2196F3" }}>
-              온라인 ({tooltip.onlineNames.length}): {tooltip.onlineNames.join(", ")}
+          {tooltip.maybeNames.length > 0 && (
+            <div style={{ marginTop: 4, color: "#F5A623" }}>
+              조정가능 ({tooltip.maybeNames.length}): {tooltip.maybeNames.join(", ")}
             </div>
           )}
-          {tooltip.offlineNames.length > 0 && (
-            <div style={{ marginTop: 4, color: "#FF7043" }}>
-              오프라인 ({tooltip.offlineNames.length}): {tooltip.offlineNames.join(", ")}
+          {tooltip.onlineOnlyNames.length > 0 && (
+            <div style={{ marginTop: 4, color: "#aaaaaa" }}>
+              온라인만가능 ({tooltip.onlineOnlyNames.length}): {tooltip.onlineOnlyNames.join(", ")}
             </div>
           )}
         </Tooltip>
