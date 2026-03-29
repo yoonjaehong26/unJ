@@ -350,9 +350,9 @@ export default function GroupResultGrid({
     );
   };
 
-  // 선택된 참가자 중 하나라도 이 슬롯을 가지고 있는지
+  // 선택된 참가자 모두가 이 슬롯을 가지고 있는지 (교집합)
   const isSlotSelected = (dateIdx, hour, minute) => {
-    return selectedParticipants.some(p =>
+    return selectedParticipants.every(p =>
       p.availability?.some(a => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute)
     );
   };
