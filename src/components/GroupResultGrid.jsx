@@ -309,6 +309,21 @@ const Tooltip = styled.div`
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
+// 여러 hex 색상을 RGB 평균으로 혼합
+function blendColors(colors) {
+  if (!colors.length) return "#FFFFFF";
+  if (colors.length === 1) return colors[0];
+  const parsed = colors.map((hex) => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]);
+  const avg = parsed
+    .reduce((acc, [r, g, b]) => [acc[0] + r, acc[1] + g, acc[2] + b], [0, 0, 0])
+    .map((v) => Math.round(v / parsed.length));
+  return `rgb(${avg[0]}, ${avg[1]}, ${avg[2]})`;
+}
+
 export default function GroupResultGrid({
   dates,
   startTime,
@@ -613,10 +628,10 @@ export default function GroupResultGrid({
               const hasSel = selectedParticipants.length > 0;
               const sel00 = hasSel && isSlotSelected(dateIdx, hour, 0);
               const sel30 = hasSel && isSlotSelected(dateIdx, hour, 30);
-              // 단독 선택이면 그 참가자 색, 교집합이면 흰색
-              const highlightColor = selectedParticipants.length === 1
-                ? selectedParticipants[0].color
-                : 'rgba(255, 255, 255, 0.95)';
+              // 선택된 참가자들 색상 혼합 (1명이면 그 색, 여러 명이면 평균 blend)
+              const highlightColor = blendColors(
+                selectedParticipants.map((p) => p.color).filter(Boolean)
+              );
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
                   <HalfHourCell
