@@ -194,9 +194,9 @@ const ParticipantList = styled.div`
 const ParticipantTag = styled.button`
   position: relative;
   padding: 4px 10px;
-  background: ${(props) => props.$hidden ? "transparent" : props.$active ? "var(--accent)" : "var(--bg-secondary)"};
-  color: ${(props) => props.$hidden ? "var(--text-muted)" : props.$active ? "white" : "var(--text-primary)"};
-  border: 1px solid ${(props) => props.$hidden ? "var(--border-subtle)" : props.$active ? "var(--accent)" : "transparent"};
+  background: ${(props) => props.$hidden ? "transparent" : props.$activeColor ? props.$activeColor : "var(--bg-secondary)"};
+  color: ${(props) => props.$hidden ? "var(--text-muted)" : props.$activeColor ? "white" : "var(--text-primary)"};
+  border: 1px solid ${(props) => props.$hidden ? "var(--border-subtle)" : props.$activeColor ? props.$activeColor : "transparent"};
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
@@ -204,7 +204,7 @@ const ParticipantTag = styled.button`
   text-decoration: ${(props) => props.$hidden ? "line-through" : "none"};
 
   &:hover {
-    border-color: var(--accent);
+    border-color: ${(props) => props.$activeColor || "var(--accent)"};
   }
 `;
 
@@ -372,8 +372,21 @@ export default function EventPage({ params }) {
   const [viewStartTime, setViewStartTime] = useState(null);
   const [viewEndTime, setViewEndTime] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [selectedParticipant, setSelectedParticipant] = useState(null);
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [hiddenNames, setHiddenNames] = useState(new Set());
+
+  const PARTICIPANT_COLORS = [
+    '#4CAF50', '#2196F3', '#FF7043', '#E91E63',
+    '#9C27B0', '#00BCD4', '#FF9800', '#607D8B',
+  ];
+
+  const toggleSelectedParticipant = (p) => {
+    setSelectedParticipants((prev) => {
+      const isSelected = prev.some((sp) => sp.name === p.name);
+      if (isSelected) return prev.filter((sp) => sp.name !== p.name);
+      return [...prev, p];
+    });
+  };
 
   const toggleHidden = (name) => {
     setHiddenNames((prev) => {
@@ -382,6 +395,7 @@ export default function EventPage({ params }) {
       else next.add(name);
       return next;
     });
+    setSelectedParticipants((prev) => prev.filter((sp) => sp.name !== name));
   };
 
   const visibleParticipants = participants.filter((p) => !hiddenNames.has(p.name));
@@ -741,33 +755,45 @@ export default function EventPage({ params }) {
       </NameSection>
 
       <Participants>
-        <Label>참가자 ({participants.length}명){selectedParticipant && <span style={{ marginLeft: 8, fontSize: 12, color: "var(--accent)" }}>— {selectedParticipant.name}의 일정 보는 중</span>}</Label>
+        <Label>
+          참가자 ({participants.length}명)
+          {selectedParticipants.length > 0 && (
+            <span style={{ marginLeft: 8, fontSize: 12, color: "var(--text-muted)" }}>
+              — {selectedParticipants.map((sp) => sp.name).join(", ")} 일정 보는 중
+            </span>
+          )}
+        </Label>
         <ParticipantList>
           {participants.length === 0 ? (
             <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>
               아직 참가자가 없습니다
             </span>
           ) : (
-            participants.map((p, index) => (
-              <ParticipantTag
-                key={p._id || p.name || index}
-                $active={!hiddenNames.has(p.name) && selectedParticipant?.name === p.name}
-                $hidden={hiddenNames.has(p.name)}
-                data-hidden={hiddenNames.has(p.name)}
-                onClick={() => !hiddenNames.has(p.name) && setSelectedParticipant(selectedParticipant?.name === p.name ? null : p)}
-              >
-                {p.name}
-                <HideToggle
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleHidden(p.name);
-                    if (selectedParticipant?.name === p.name) setSelectedParticipant(null);
-                  }}
+            participants.map((p, index) => {
+              const selIdx = selectedParticipants.findIndex((sp) => sp.name === p.name);
+              const activeColor = !hiddenNames.has(p.name) && selIdx !== -1
+                ? PARTICIPANT_COLORS[selIdx % PARTICIPANT_COLORS.length]
+                : null;
+              return (
+                <ParticipantTag
+                  key={p._id || p.name || index}
+                  $activeColor={activeColor}
+                  $hidden={hiddenNames.has(p.name)}
+                  data-hidden={hiddenNames.has(p.name)}
+                  onClick={() => !hiddenNames.has(p.name) && toggleSelectedParticipant(p)}
                 >
-                  {hiddenNames.has(p.name) ? "+" : "−"}
-                </HideToggle>
-              </ParticipantTag>
-            ))
+                  {p.name}
+                  <HideToggle
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleHidden(p.name);
+                    }}
+                  >
+                    {hiddenNames.has(p.name) ? "+" : "−"}
+                  </HideToggle>
+                </ParticipantTag>
+              );
+            })
           )}
         </ParticipantList>
       </Participants>
@@ -787,7 +813,7 @@ export default function EventPage({ params }) {
           startTime={viewStartTime ?? event.startTime}
           endTime={viewEndTime ?? event.endTime}
           participants={visibleParticipants}
-          selectedParticipant={selectedParticipant}
+          selectedParticipants={selectedParticipants}
         />
       </GridsContainer>
 

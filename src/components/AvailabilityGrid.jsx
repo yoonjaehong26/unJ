@@ -136,6 +136,8 @@ const HalfHourCell = styled.div`
   height: 23px;
   background: ${(props) => {
     if (props.$status === "available") return "var(--accent)";
+    if (props.$status === "online") return "#2196F3";
+    if (props.$status === "offline") return "#FF7043";
     if (props.$status === "maybe") return "#F5A623";
     return "var(--bg-secondary)";
   }};
@@ -359,14 +361,21 @@ export default function AvailabilityGrid({
               $color="var(--accent)"
               onClick={() => setSelectionMode("available")}
             >
-              🟢 가능
+              가능
             </ModeButton>
             <ModeButton
-              $active={selectionMode === "maybe"}
-              $color="#F5A623"
-              onClick={() => setSelectionMode("maybe")}
+              $active={selectionMode === "online"}
+              $color="#2196F3"
+              onClick={() => setSelectionMode("online")}
             >
-              🟡 조정가능
+              온라인
+            </ModeButton>
+            <ModeButton
+              $active={selectionMode === "offline"}
+              $color="#FF7043"
+              onClick={() => setSelectionMode("offline")}
+            >
+              오프라인
             </ModeButton>
           </ModeToggle>
         )}

@@ -13,7 +13,7 @@ const Container = styled.div`
   padding: 16px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  
+
   @media (max-width: 768px) {
     padding: 12px;
   }
@@ -46,24 +46,6 @@ const FilterLabel = styled.span`
   margin-right: 4px;
 `;
 
-const FilterButton = styled.button`
-  padding: 6px 10px;
-  border: 1px solid ${(props) => (props.$active ? "var(--accent)" : "var(--border-subtle)")};
-  border-radius: 4px;
-  background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
-  color: ${(props) => (props.$active ? "white" : "var(--text-secondary)")};
-  font-size: 11px;
-  
-  @media (max-width: 768px) {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-
-  &:hover {
-    border-color: var(--accent);
-  }
-`;
-
 const DropdownWrapper = styled.div`
   position: relative;
   display: inline-block;
@@ -82,11 +64,11 @@ const DropdownTrigger = styled.button`
   cursor: pointer;
   min-width: 100px;
   justify-content: space-between;
-  
+
   &:hover {
     border-color: var(--accent);
   }
-  
+
   &::after {
     content: '▼';
     font-size: 8px;
@@ -122,7 +104,7 @@ const DropdownItem = styled.button`
   font-size: 12px;
   cursor: pointer;
   text-align: left;
-  
+
   &:hover {
     background: ${(props) => (props.$active ? "var(--accent)" : "var(--bg-secondary)")};
   }
@@ -135,6 +117,7 @@ const Legend = styled.div`
   margin-bottom: 12px;
   font-size: 11px;
   color: var(--text-muted);
+  flex-wrap: wrap;
 `;
 
 const LegendItem = styled.div`
@@ -147,10 +130,9 @@ const LegendColor = styled.div`
   width: 14px;
   height: 14px;
   border-radius: 3px;
-  background: ${(props) => props.$color};
+  background: ${(props) => props.$color || "transparent"};
   ${(props) => props.$border && `
     border: 2px solid ${props.$border};
-    background: var(--bg-secondary);
   `}
 `;
 
@@ -160,7 +142,7 @@ const Grid = styled.div`
   gap: 2px;
   user-select: none;
   min-width: 330px;
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 40px repeat(7, minmax(36px, 1fr));
     gap: 1px;
@@ -207,25 +189,22 @@ const HalfHourCell = styled.div`
     const maybe = props.$maybe || 0;
     const total = available + maybe;
     if (total === 0) return "var(--bg-secondary)";
-    
-    // 둘 다 있으면 좌우 분할 그라데이션
+
     if (available > 0 && maybe > 0) {
       const greenIntensity = Math.min(available / props.$total, 1);
       const yellowIntensity = Math.min(maybe / props.$total, 1);
-      return `linear-gradient(90deg, 
-        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%, 
-        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 50%, 
-        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 50%, 
+      return `linear-gradient(90deg,
+        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%,
+        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 50%,
+        rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 50%,
         rgba(245, 166, 35, ${0.3 + yellowIntensity * 0.7}) 100%)`;
     }
-    
-    // maybe만 있으면 노란색
+
     if (maybe > 0) {
       const intensity = Math.min(maybe / props.$total, 1);
       return `rgba(245, 166, 35, ${0.3 + intensity * 0.7})`;
     }
-    
-    // available만 있으면 초록색
+
     const intensity = Math.min(available / props.$total, 1);
     return `rgba(76, 175, 80, ${0.2 + intensity * 0.8})`;
   }};
@@ -239,47 +218,43 @@ const HalfHourCell = styled.div`
   color: white;
   box-sizing: border-box;
   margin-bottom: 1px;
-  
-  /* 연속 가능 시간: inset box-shadow로 글로우 효과 */
+
   ${(props) => {
     if (!props.$borderSides || !props.$borderColor) return '';
     const color = props.$borderColor;
-    
-    let shadow = `inset 4px 0 0 ${color}, inset -4px 0 0 ${color}`;
+
+    let shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}`;
     let radius = '';
-    
+
     if (props.$borderTop && props.$borderBottom) {
-      shadow = `inset 4px 0 0 ${color}, inset -4px 0 0 ${color}, inset 0 4px 0 ${color}, inset 0 -4px 0 ${color}`;
-      radius = 'border-radius: 6px;';
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}, inset 0 -3px 0 ${color}`;
+      radius = 'border-radius: 4px;';
     } else if (props.$borderTop) {
-      shadow = `inset 4px 0 0 ${color}, inset -4px 0 0 ${color}, inset 0 4px 0 ${color}`;
-      radius = 'border-top-left-radius: 6px; border-top-right-radius: 6px;';
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}`;
+      radius = 'border-top-left-radius: 4px; border-top-right-radius: 4px;';
     } else if (props.$borderBottom) {
-      shadow = `inset 4px 0 0 ${color}, inset -4px 0 0 ${color}, inset 0 -4px 0 ${color}`;
-      radius = 'border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;';
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 -3px 0 ${color}`;
+      radius = 'border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;';
     }
-    
+
     return `box-shadow: ${shadow}; ${radius}`;
   }}
 
-  /* 선택된 참가자가 없는 슬롯은 어둡게 */
   ${(props) => props.$dimmed && `
-    opacity: 0.15;
+    opacity: 0.12;
   `}
 
-  /* 선택된 참가자가 있는 슬롯 강조 */
   ${(props) => props.$highlighted && `
-    outline: 2px solid ${props.$highlighted === 'available' ? 'var(--accent)' : '#F5A623'};
+    outline: 2px solid rgba(255, 255, 255, 0.95);
     outline-offset: -2px;
-    z-index: 1;
+    z-index: 2;
   `}
 
   &:hover {
-    opacity: ${(props) => props.$dimmed ? 0.15 : 0.8};
+    opacity: ${(props) => props.$dimmed ? 0.12 : 0.8};
   }
 `;
 
-// 좌우 분할 표시용
 const SplitContent = styled.div`
   display: flex;
   width: 100%;
@@ -316,7 +291,7 @@ export default function GroupResultGrid({
   startTime,
   endTime,
   participants,
-  selectedParticipant,
+  selectedParticipants = [],
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [minSlots, setMinSlots] = useState(0);
@@ -332,50 +307,56 @@ export default function GroupResultGrid({
   const totalParticipants = participants.length;
   const requiredPeople = minPeople === null ? totalParticipants : minPeople;
 
-  // 각 슬롯별 인원 계산 (30분 단위) - available과 maybe 분리
+  // flexible = online + offline + maybe(backward compat)
   const getCounts = (dateIdx, hour, minute) => {
     let available = 0;
     let maybe = 0;
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
-        if (slot.status === "maybe") {
-          maybe++;
-        } else {
+        if (slot.status === "available") {
           available++;
+        } else {
+          maybe++; // online, offline, maybe all count as flexible
         }
       }
     });
     return { available, maybe, total: available + maybe };
   };
 
-  // 해당 슬롯에 가능한 사람들 (상태별)
   const getParticipantInfo = (dateIdx, hour, minute) => {
     const availableNames = [];
-    const maybeNames = [];
+    const onlineNames = [];
+    const offlineNames = [];
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
-        if (slot.status === "maybe") {
-          maybeNames.push(p.name);
-        } else {
-          availableNames.push(p.name);
-        }
+        if (slot.status === "available") availableNames.push(p.name);
+        else if (slot.status === "online") onlineNames.push(p.name);
+        else if (slot.status === "offline") offlineNames.push(p.name);
+        else onlineNames.push(p.name); // maybe backward compat → online
       }
     });
-    return { availableNames, maybeNames };
+    return { availableNames, onlineNames, offlineNames };
   };
 
-  // 선택된 참가자의 해당 슬롯 상태
-  const getSelectedStatus = (dateIdx, hour, minute) => {
-    if (!selectedParticipant) return null;
-    const slot = selectedParticipant.availability?.find(
-      (a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute
+  // 전원 가능 (available only) 여부
+  const isAllAvailable = (dateIdx, hour, minute) => {
+    if (totalParticipants < 2) return false;
+    return participants.every(p =>
+      p.availability?.some(a =>
+        a.dateIdx === dateIdx && a.hour === hour && a.minute === minute && a.status === "available"
+      )
     );
-    return slot ? slot.status : null;
   };
 
-  // 슬롯을 인덱스로 변환 (계산 편의)
+  // 선택된 참가자 중 하나라도 이 슬롯을 가지고 있는지
+  const isSlotSelected = (dateIdx, hour, minute) => {
+    return selectedParticipants.some(p =>
+      p.availability?.some(a => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute)
+    );
+  };
+
   const slotToIndex = (hour, minute) => (hour - startTime) * 2 + (minute === 30 ? 1 : 0);
   const indexToSlot = (idx) => {
     const hour = startTime + Math.floor(idx / 2);
@@ -384,28 +365,18 @@ export default function GroupResultGrid({
   };
   const totalSlots = (endTime - startTime) * 2;
 
-  // 연속 가능 슬롯 체크 (초록색: available만, 노란색: available+maybe)
   const isHighlightedGreen = (dateIdx, hour, minute) => {
     if (minSlots === 0) return false;
     if (requiredPeople === 0) return false;
-    
+
     const currentIdx = slotToIndex(hour, minute);
-    
-    // 이 슬롯이 "가능"만으로 연속 블록의 일부인지 확인
+
     for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
       let enoughAvailable = true;
       for (let i = startIdx; i < startIdx + minSlots; i++) {
-        if (i >= totalSlots) {
-          enoughAvailable = false;
-          break;
-        }
+        if (i >= totalSlots) { enoughAvailable = false; break; }
         const { hour: h, minute: m } = indexToSlot(i);
-        const counts = getCounts(dateIdx, h, m);
-        // 필요 인원 이상이 "가능"이어야 함
-        if (counts.available < requiredPeople) {
-          enoughAvailable = false;
-          break;
-        }
+        if (getCounts(dateIdx, h, m).available < requiredPeople) { enoughAvailable = false; break; }
       }
       if (enoughAvailable) return true;
     }
@@ -415,83 +386,82 @@ export default function GroupResultGrid({
   const isHighlightedYellow = (dateIdx, hour, minute) => {
     if (minSlots === 0) return false;
     if (requiredPeople === 0) return false;
-    
+
     const currentIdx = slotToIndex(hour, minute);
-    
-    // "가능" or "조정가능" 포함 연속 블록 확인
+
     for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
       let enoughTotal = true;
       for (let i = startIdx; i < startIdx + minSlots; i++) {
-        if (i >= totalSlots) {
-          enoughTotal = false;
-          break;
-        }
+        if (i >= totalSlots) { enoughTotal = false; break; }
         const { hour: h, minute: m } = indexToSlot(i);
-        const counts = getCounts(dateIdx, h, m);
-        // 필요 인원 이상이 "가능" 또는 "조정가능"으로 표시
-        if (counts.total < requiredPeople) {
-          enoughTotal = false;
-          break;
-        }
+        if (getCounts(dateIdx, h, m).total < requiredPeople) { enoughTotal = false; break; }
       }
       if (enoughTotal) return true;
     }
     return false;
   };
 
-  // 테두리 위치 및 색상 결정
   const getBorderInfo = (dateIdx, hour, minute) => {
     const isGreen = isHighlightedGreen(dateIdx, hour, minute);
     const isYellow = isHighlightedYellow(dateIdx, hour, minute);
-    
-    if (!isGreen && !isYellow) {
+    const allAvail = isAllAvailable(dateIdx, hour, minute);
+
+    if (!isGreen && !isYellow && !allAvail) {
       return { borderTop: false, borderBottom: false, borderSides: false, borderColor: null };
     }
-    
+
+    let borderColor;
+    let checkFn;
+
+    if (isGreen) {
+      borderColor = '#1B5E20';
+      checkFn = (d, h, m) => isHighlightedGreen(d, h, m);
+    } else if (isYellow) {
+      borderColor = '#B8860B';
+      checkFn = (d, h, m) => isHighlightedYellow(d, h, m);
+    } else {
+      // 전원 가능 default border
+      borderColor = 'rgba(255, 255, 255, 0.85)';
+      checkFn = (d, h, m) => isAllAvailable(d, h, m);
+    }
+
     const currentIdx = slotToIndex(hour, minute);
-    
-    // 현재 하이라이트 타입 결정 (초록이 우선)
-    const currentType = isGreen ? 'green' : 'yellow';
-    const checkHighlight = isGreen ? isHighlightedGreen : isHighlightedYellow;
-    
-    // 이전 슬롯 확인
+
     let prevHighlighted = false;
     if (currentIdx > 0) {
       const { hour: prevH, minute: prevM } = indexToSlot(currentIdx - 1);
-      prevHighlighted = checkHighlight(dateIdx, prevH, prevM);
+      prevHighlighted = checkFn(dateIdx, prevH, prevM);
     }
-    
-    // 다음 슬롯 확인
+
     let nextHighlighted = false;
     if (currentIdx < totalSlots - 1) {
       const { hour: nextH, minute: nextM } = indexToSlot(currentIdx + 1);
-      nextHighlighted = checkHighlight(dateIdx, nextH, nextM);
+      nextHighlighted = checkFn(dateIdx, nextH, nextM);
     }
-    
+
     return {
       borderTop: !prevHighlighted,
       borderBottom: !nextHighlighted,
       borderSides: true,
-      borderColor: currentType === 'green' ? '#1B5E20' : '#B8860B',
+      borderColor,
     };
   };
 
   const handleMouseEnter = (e, dateIdx, hour, minute) => {
-    const { availableNames, maybeNames } = getParticipantInfo(dateIdx, hour, minute);
-    if (availableNames.length > 0 || maybeNames.length > 0) {
+    const { availableNames, onlineNames, offlineNames } = getParticipantInfo(dateIdx, hour, minute);
+    if (availableNames.length > 0 || onlineNames.length > 0 || offlineNames.length > 0) {
       setTooltip({
         x: e.clientX + 10,
         y: e.clientY + 10,
         availableNames,
-        maybeNames,
+        onlineNames,
+        offlineNames,
         time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
       });
     }
   };
 
-  const handleMouseLeave = () => {
-    setTooltip(null);
-  };
+  const handleMouseLeave = () => setTooltip(null);
 
   const formatHour = (h) => `${h.toString().padStart(2, "0")}:00`;
   const formatDate = (date) => new Date(date).getDate() + "일";
@@ -512,10 +482,7 @@ export default function GroupResultGrid({
             </DropdownTrigger>
             {slotsDropdownOpen && (
               <DropdownMenu>
-                <DropdownItem
-                  $active={minSlots === 0}
-                  onClick={() => { setMinSlots(0); setSlotsDropdownOpen(false); }}
-                >
+                <DropdownItem $active={minSlots === 0} onClick={() => { setMinSlots(0); setSlotsDropdownOpen(false); }}>
                   전체
                 </DropdownItem>
                 {Array.from({ length: (endTime - startTime) * 2 }, (_, i) => i + 1).map((slots) => {
@@ -523,11 +490,7 @@ export default function GroupResultGrid({
                   const m = (slots % 2) * 30;
                   const label = h > 0 ? (m > 0 ? `${h}시간 ${m}분+` : `${h}시간+`) : `${m}분+`;
                   return (
-                    <DropdownItem
-                      key={slots}
-                      $active={minSlots === slots}
-                      onClick={() => { setMinSlots(slots); setSlotsDropdownOpen(false); }}
-                    >
+                    <DropdownItem key={slots} $active={minSlots === slots} onClick={() => { setMinSlots(slots); setSlotsDropdownOpen(false); }}>
                       {label}
                     </DropdownItem>
                   );
@@ -536,7 +499,7 @@ export default function GroupResultGrid({
             )}
           </DropdownWrapper>
         </FilterContainer>
-        
+
         {totalParticipants > 1 && (
           <FilterContainer>
             <FilterLabel>인원:</FilterLabel>
@@ -546,18 +509,11 @@ export default function GroupResultGrid({
               </DropdownTrigger>
               {peopleDropdownOpen && (
                 <DropdownMenu>
-                  <DropdownItem
-                    $active={minPeople === null}
-                    onClick={() => { setMinPeople(null); setPeopleDropdownOpen(false); }}
-                  >
+                  <DropdownItem $active={minPeople === null} onClick={() => { setMinPeople(null); setPeopleDropdownOpen(false); }}>
                     전체 ({totalParticipants}명)
                   </DropdownItem>
                   {Array.from({ length: totalParticipants }, (_, i) => totalParticipants - i).map((count) => (
-                    <DropdownItem
-                      key={count}
-                      $active={minPeople === count}
-                      onClick={() => { setMinPeople(count); setPeopleDropdownOpen(false); }}
-                    >
+                    <DropdownItem key={count} $active={minPeople === count} onClick={() => { setMinPeople(count); setPeopleDropdownOpen(false); }}>
                       {count}명 이상
                     </DropdownItem>
                   ))}
@@ -583,8 +539,14 @@ export default function GroupResultGrid({
         </LegendItem>
         <LegendItem>
           <LegendColor $color="rgba(245, 166, 35, 0.7)" />
-          <span>조정가능</span>
+          <span>온/오프라인</span>
         </LegendItem>
+        {totalParticipants >= 2 && (
+          <LegendItem>
+            <LegendColor $color="rgba(76, 175, 80, 0.9)" $border="rgba(255,255,255,0.85)" />
+            <span>전원 가능</span>
+          </LegendItem>
+        )}
       </Legend>
 
       <Grid>
@@ -606,11 +568,11 @@ export default function GroupResultGrid({
               const counts30 = getCounts(dateIdx, hour, 30);
               const border00 = getBorderInfo(dateIdx, hour, 0);
               const border30 = getBorderInfo(dateIdx, hour, 30);
-              const sel00 = getSelectedStatus(dateIdx, hour, 0);
-              const sel30 = getSelectedStatus(dateIdx, hour, 30);
+              const hasSel = selectedParticipants.length > 0;
+              const sel00 = hasSel && isSlotSelected(dateIdx, hour, 0);
+              const sel30 = hasSel && isSlotSelected(dateIdx, hour, 30);
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
-                  {/* 정시 (XX:00) */}
                   <HalfHourCell
                     $available={counts00.available}
                     $maybe={counts00.maybe}
@@ -619,8 +581,7 @@ export default function GroupResultGrid({
                     $borderBottom={border00.borderBottom}
                     $borderSides={border00.borderSides}
                     $borderColor={border00.borderColor}
-                    $isHalf={false}
-                    $dimmed={selectedParticipant && !sel00}
+                    $dimmed={hasSel && !sel00}
                     $highlighted={sel00}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
@@ -632,7 +593,6 @@ export default function GroupResultGrid({
                       </SplitContent>
                     ) : counts00.total > 0 ? counts00.total : ""}
                   </HalfHourCell>
-                  {/* 30분 (XX:30) */}
                   <HalfHourCell
                     $available={counts30.available}
                     $maybe={counts30.maybe}
@@ -641,8 +601,7 @@ export default function GroupResultGrid({
                     $borderBottom={border30.borderBottom}
                     $borderSides={border30.borderSides}
                     $borderColor={border30.borderColor}
-                    $isHalf={true}
-                    $dimmed={selectedParticipant && !sel30}
+                    $dimmed={hasSel && !sel30}
                     $highlighted={sel30}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
@@ -666,12 +625,17 @@ export default function GroupResultGrid({
           <strong>{tooltip.time}</strong>
           {tooltip.availableNames.length > 0 && (
             <div style={{ marginTop: 4, color: "var(--accent)" }}>
-              🟢 가능 ({tooltip.availableNames.length}): {tooltip.availableNames.join(", ")}
+              가능 ({tooltip.availableNames.length}): {tooltip.availableNames.join(", ")}
             </div>
           )}
-          {tooltip.maybeNames.length > 0 && (
-            <div style={{ marginTop: 4, color: "#F5A623" }}>
-              🟡 조정가능 ({tooltip.maybeNames.length}): {tooltip.maybeNames.join(", ")}
+          {tooltip.onlineNames.length > 0 && (
+            <div style={{ marginTop: 4, color: "#2196F3" }}>
+              온라인 ({tooltip.onlineNames.length}): {tooltip.onlineNames.join(", ")}
+            </div>
+          )}
+          {tooltip.offlineNames.length > 0 && (
+            <div style={{ marginTop: 4, color: "#FF7043" }}>
+              오프라인 ({tooltip.offlineNames.length}): {tooltip.offlineNames.join(", ")}
             </div>
           )}
         </Tooltip>
