@@ -267,11 +267,6 @@ const HalfHourCell = styled.div`
     opacity: 0.12;
   `}
 
-  ${(props) => props.$highlighted && `
-    outline: 2px solid ${props.$highlightColor || 'rgba(255, 255, 255, 0.95)'};
-    outline-offset: -2px;
-    z-index: 2;
-  `}
 
   &:hover {
     opacity: ${(props) => props.$dimmed ? 0.12 : 0.8};
@@ -628,10 +623,13 @@ export default function GroupResultGrid({
               const hasSel = selectedParticipants.length > 0;
               const sel00 = hasSel && isSlotSelected(dateIdx, hour, 0);
               const sel30 = hasSel && isSlotSelected(dateIdx, hour, 30);
-              // 선택된 참가자들 색상 혼합 (1명이면 그 색, 여러 명이면 평균 blend)
-              const highlightColor = blendColors(
-                selectedParticipants.map((p) => p.color).filter(Boolean)
-              );
+              const selColors = selectedParticipants.map((p) => p.color).filter(Boolean);
+              const makeStripe = (colors) => {
+                if (!colors.length) return 'none';
+                const n = colors.length;
+                const stops = colors.map((c, i) => `${c} ${(i/n)*100}% ${((i+1)/n)*100}%`).join(', ');
+                return `linear-gradient(to right, ${stops})`;
+              };
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
                   <HalfHourCell
@@ -644,8 +642,6 @@ export default function GroupResultGrid({
                     $borderSides={border00.borderSides}
                     $borderColor={border00.borderColor}
                     $dimmed={hasSel && !sel00}
-                    $highlighted={sel00}
-                    $highlightColor={highlightColor}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -655,6 +651,9 @@ export default function GroupResultGrid({
                         <SplitNumber>{counts00.maybe + counts00.onlineOnly}</SplitNumber>
                       </SplitContent>
                     ) : counts00.total > 0 ? counts00.total : ""}
+                    {sel00 && selColors.length > 0 && (
+                      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background: makeStripe(selColors), pointerEvents:'none' }} />
+                    )}
                   </HalfHourCell>
                   <HalfHourCell
                     $available={counts30.available}
@@ -666,8 +665,6 @@ export default function GroupResultGrid({
                     $borderSides={border30.borderSides}
                     $borderColor={border30.borderColor}
                     $dimmed={hasSel && !sel30}
-                    $highlighted={sel30}
-                    $highlightColor={highlightColor}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -677,6 +674,9 @@ export default function GroupResultGrid({
                         <SplitNumber>{counts30.maybe + counts30.onlineOnly}</SplitNumber>
                       </SplitContent>
                     ) : counts30.total > 0 ? counts30.total : ""}
+                    {sel30 && selColors.length > 0 && (
+                      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background: makeStripe(selColors), pointerEvents:'none' }} />
+                    )}
                   </HalfHourCell>
                 </HourGroup>
               );
