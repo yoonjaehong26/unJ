@@ -159,9 +159,7 @@ const HalfHourCell = styled.div`
   height: 23px;
   background: ${(props) => {
     if (props.$status === "available") return "var(--accent)";
-    if (props.$status === "online") return "#F5A623";
-    if (props.$status === "offline") return "#E09000";
-    if (props.$status === "maybe") return "#F5A623";
+    if (props.$status === "online" || props.$status === "offline" || props.$status === "maybe") return "#F5A623";
     return "var(--bg-secondary)";
   }};
   cursor: pointer;
@@ -205,8 +203,8 @@ export default function AvailabilityGrid({
   const [dragColumn, setDragColumn] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [selectionMode, setSelectionMode] = useState("available");
-  // "online" | "offline" — 조정가능 선택 시 세부 구분
-  const [flexSubMode, setFlexSubMode] = useState("online");
+  // "maybe" | "online" | "offline" — 노란색 슬롯의 의미
+  const [flexType, setFlexType] = useState("maybe");
   const gridRef = useRef(null);
 
   // 탭 vs 드래그 구분용 refs
@@ -379,42 +377,46 @@ export default function AvailabilityGrid({
     >
       <Header>
         <GridTitle>{title}</GridTitle>
-        {!readOnly && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <ModeToggle>
-              <ModeButton
-                $active={selectionMode === "available"}
-                $color="var(--accent)"
-                onClick={() => setSelectionMode("available")}
-              >
-                가능
-              </ModeButton>
-              <ModeButton
-                $active={selectionMode === "online" || selectionMode === "offline"}
-                $color="#F5A623"
-                onClick={() => setSelectionMode(flexSubMode)}
-              >
-                조정가능
-              </ModeButton>
-            </ModeToggle>
-            <SubToggle>
-              <SubButton
-                $active={flexSubMode === "online" && selectionMode !== "available"}
-                $color="#2196F3"
-                onClick={() => { setFlexSubMode("online"); setSelectionMode("online"); }}
-              >
-                온라인
-              </SubButton>
-              <SubButton
-                $active={flexSubMode === "offline" && selectionMode !== "available"}
-                $color="#FF7043"
-                onClick={() => { setFlexSubMode("offline"); setSelectionMode("offline"); }}
-              >
-                오프라인
-              </SubButton>
-            </SubToggle>
-          </div>
-        )}
+        {!readOnly && (() => {
+          const flexLabels = {
+            maybe: "조정가능",
+            online: "온라인만가능",
+            offline: "오프라인만가능",
+          };
+          const isFlexActive = selectionMode !== "available";
+          return (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <ModeToggle>
+                <ModeButton
+                  $active={!isFlexActive}
+                  $color="var(--accent)"
+                  onClick={() => setSelectionMode("available")}
+                >
+                  가능
+                </ModeButton>
+                <ModeButton
+                  $active={isFlexActive}
+                  $color="#F5A623"
+                  onClick={() => setSelectionMode(flexType)}
+                >
+                  {flexLabels[flexType]}
+                </ModeButton>
+              </ModeToggle>
+              <SubToggle>
+                {Object.entries(flexLabels).map(([key, label]) => (
+                  <SubButton
+                    key={key}
+                    $active={flexType === key}
+                    $color="#F5A623"
+                    onClick={() => { setFlexType(key); setSelectionMode(key); }}
+                  >
+                    {label}
+                  </SubButton>
+                ))}
+              </SubToggle>
+            </div>
+          );
+        })()}
       </Header>
 
       <Grid>
