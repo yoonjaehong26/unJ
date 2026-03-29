@@ -231,17 +231,17 @@ const HalfHourCell = styled.div`
     if (!props.$borderSides || !props.$borderColor) return '';
     const color = props.$borderColor;
 
-    let shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}`;
+    let shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}`;
     let radius = '';
 
     if (props.$borderTop && props.$borderBottom) {
-      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}, inset 0 -3px 0 ${color}`;
+      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 5px 0 ${color}, inset 0 -5px 0 ${color}`;
       radius = 'border-radius: 4px;';
     } else if (props.$borderTop) {
-      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}`;
+      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 5px 0 ${color}`;
       radius = 'border-top-left-radius: 4px; border-top-right-radius: 4px;';
     } else if (props.$borderBottom) {
-      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 -3px 0 ${color}`;
+      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 -5px 0 ${color}`;
       radius = 'border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;';
     }
 
@@ -422,14 +422,14 @@ export default function GroupResultGrid({
     let checkFn;
 
     if (isGreen) {
-      borderColor = '#1B5E20';
+      borderColor = '#00E676';
       checkFn = (d, h, m) => isHighlightedGreen(d, h, m);
     } else if (isYellow) {
-      borderColor = '#B8860B';
+      borderColor = '#FFD600';
       checkFn = (d, h, m) => isHighlightedYellow(d, h, m);
     } else {
       // 전원 가능 default border
-      borderColor = 'rgba(255, 255, 255, 0.85)';
+      borderColor = '#FFFFFF';
       checkFn = (d, h, m) => isAllAvailable(d, h, m);
     }
 
