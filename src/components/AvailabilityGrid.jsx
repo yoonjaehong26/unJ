@@ -397,24 +397,22 @@ export default function AvailabilityGrid({
                 조정가능
               </ModeButton>
             </ModeToggle>
-            {(selectionMode === "online" || selectionMode === "offline") && (
-              <SubToggle>
-                <SubButton
-                  $active={flexSubMode === "online"}
-                  $color="#2196F3"
-                  onClick={() => { setFlexSubMode("online"); setSelectionMode("online"); }}
-                >
-                  온라인
-                </SubButton>
-                <SubButton
-                  $active={flexSubMode === "offline"}
-                  $color="#FF7043"
-                  onClick={() => { setFlexSubMode("offline"); setSelectionMode("offline"); }}
-                >
-                  오프라인
-                </SubButton>
-              </SubToggle>
-            )}
+            <SubToggle>
+              <SubButton
+                $active={flexSubMode === "online" && selectionMode !== "available"}
+                $color="#2196F3"
+                onClick={() => { setFlexSubMode("online"); setSelectionMode("online"); }}
+              >
+                온라인
+              </SubButton>
+              <SubButton
+                $active={flexSubMode === "offline" && selectionMode !== "available"}
+                $color="#FF7043"
+                onClick={() => { setFlexSubMode("offline"); setSelectionMode("offline"); }}
+              >
+                오프라인
+              </SubButton>
+            </SubToggle>
           </div>
         )}
       </Header>
