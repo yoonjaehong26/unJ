@@ -245,7 +245,7 @@ const HalfHourCell = styled.div`
   `}
 
   ${(props) => props.$highlighted && `
-    outline: 2px solid rgba(255, 255, 255, 0.95);
+    outline: 2px solid ${props.$highlightColor || 'rgba(255, 255, 255, 0.95)'};
     outline-offset: -2px;
     z-index: 2;
   `}
@@ -571,6 +571,10 @@ export default function GroupResultGrid({
               const hasSel = selectedParticipants.length > 0;
               const sel00 = hasSel && isSlotSelected(dateIdx, hour, 0);
               const sel30 = hasSel && isSlotSelected(dateIdx, hour, 30);
+              // 단독 선택이면 그 참가자 색, 교집합이면 흰색
+              const highlightColor = selectedParticipants.length === 1
+                ? selectedParticipants[0].color
+                : 'rgba(255, 255, 255, 0.95)';
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
                   <HalfHourCell
@@ -583,6 +587,7 @@ export default function GroupResultGrid({
                     $borderColor={border00.borderColor}
                     $dimmed={hasSel && !sel00}
                     $highlighted={sel00}
+                    $highlightColor={highlightColor}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 0)}
                     onMouseLeave={handleMouseLeave}
                   >
@@ -603,6 +608,7 @@ export default function GroupResultGrid({
                     $borderColor={border30.borderColor}
                     $dimmed={hasSel && !sel30}
                     $highlighted={sel30}
+                    $highlightColor={highlightColor}
                     onMouseEnter={(e) => handleMouseEnter(e, dateIdx, hour, 30)}
                     onMouseLeave={handleMouseLeave}
                   >

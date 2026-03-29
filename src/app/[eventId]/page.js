@@ -813,7 +813,10 @@ export default function EventPage({ params }) {
           startTime={viewStartTime ?? event.startTime}
           endTime={viewEndTime ?? event.endTime}
           participants={visibleParticipants}
-          selectedParticipants={selectedParticipants}
+          selectedParticipants={selectedParticipants.map((sp, idx) => ({
+            ...sp,
+            color: PARTICIPANT_COLORS[idx % PARTICIPANT_COLORS.length],
+          }))}
         />
       </GridsContainer>
 
