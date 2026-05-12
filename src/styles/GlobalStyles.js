@@ -9,16 +9,20 @@ const GlobalStyles = createGlobalStyle`
     --bg-secondary: #f5f5f5;
     --bg-card: #ffffff;
     --bg-hover: #eeeeee;
-    
+
     --border-subtle: #e0e0e0;
     --border-active: #333333;
-    
+
     --text-primary: #111111;
     --text-secondary: #666666;
     --text-muted: #999999;
-    
+
     --accent: #4CAF50;
     --accent-light: #81C784;
+
+    --highlight-green: #1b5e20;
+    --highlight-blue: #01579b;
+    --highlight-yellow: #e65100;
   }
 
   [data-theme="dark"] {
@@ -26,13 +30,17 @@ const GlobalStyles = createGlobalStyle`
     --bg-secondary: #1e1e1e;
     --bg-card: #252525;
     --bg-hover: #333333;
-    
+
     --border-subtle: #333333;
     --border-active: #ffffff;
-    
+
     --text-primary: #ffffff;
     --text-secondary: #aaaaaa;
     --text-muted: #666666;
+
+    --highlight-green: #00e676;
+    --highlight-blue: #40c4ff;
+    --highlight-yellow: #ffab40;
   }
 
   * {

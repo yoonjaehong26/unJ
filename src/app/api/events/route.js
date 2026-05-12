@@ -3,7 +3,7 @@
  */
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import { randomUUID } from "crypto";
 
 export async function POST(request) {
   try {
@@ -20,17 +20,20 @@ export async function POST(request) {
     const client = await clientPromise;
     const db = client.db("unj");
 
+    const adminToken = randomUUID();
+
     const event = {
       name,
       dates: dates.map((d) => new Date(d)),
       startTime: startTime || 9,
       endTime: endTime || 18,
+      adminToken,
       createdAt: new Date(),
     };
 
     const result = await db.collection("events").insertOne(event);
 
-    return NextResponse.json({ eventId: result.insertedId.toString() });
+    return NextResponse.json({ eventId: result.insertedId.toString(), adminToken });
   } catch (error) {
     console.error("Event creation error:", error);
     return NextResponse.json(
