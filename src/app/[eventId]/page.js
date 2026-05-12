@@ -506,6 +506,8 @@ export default function EventPage({ params }) {
   const PARTICIPANT_COLORS = [
     '#4CAF50', '#2196F3', '#FF7043', '#E91E63',
     '#9C27B0', '#00BCD4', '#FF9800', '#607D8B',
+    '#8BC34A', '#F06292', '#26A69A', '#7986CB',
+    '#FFA726', '#AB47BC', '#29B6F6', '#EF5350',
   ];
 
   // URL에서 admin 토큰 읽기
