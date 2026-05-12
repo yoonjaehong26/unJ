@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, use } from "react";
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import GroupResultGrid from "@/components/GroupResultGrid";
 import ScheduleImportExport from "@/components/ScheduleImportExport";
@@ -23,11 +23,11 @@ const PageHeader = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   gap: 12px;
 
   @media (max-width: 768px) {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 `;
 
@@ -40,6 +40,14 @@ const Title = styled.h1`
   }
 `;
 
+const HeaderButtons = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+`;
+
 const CopyButton = styled.button`
   padding: 10px 16px;
   border: 1px solid var(--border-subtle);
@@ -48,7 +56,6 @@ const CopyButton = styled.button`
   color: var(--text-secondary);
   font-size: 13px;
   white-space: nowrap;
-  flex-shrink: 0;
 
   &:hover {
     border-color: var(--text-muted);
@@ -57,6 +64,95 @@ const CopyButton = styled.button`
   &:active {
     background: var(--bg-tertiary);
   }
+`;
+
+const AdminPanel = styled.div`
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+`;
+
+const AdminPanelTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 12px;
+`;
+
+const AdminRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+`;
+
+const AdminLabel = styled.span`
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 60px;
+`;
+
+const AdminDayToggleRow = styled.div`
+  display: flex;
+  gap: 6px;
+`;
+
+const AdminDayBtn = styled.button`
+  width: 34px;
+  height: 34px;
+  border: 1px solid ${(props) => (props.$selected ? "var(--accent)" : "var(--border-subtle)")};
+  border-radius: 8px;
+  background: ${(props) => (props.$selected ? "var(--accent)" : "transparent")};
+  color: ${(props) => (props.$selected ? "white" : "var(--text-secondary)")};
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+`;
+
+const AdminSaveRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+`;
+
+const AdminSaveBtn = styled.button`
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const AdminSaveMsg = styled.span`
+  font-size: 12px;
+  color: ${(props) => (props.$error ? "#e74c3c" : "var(--accent)")};
+`;
+
+const AdminNote = styled.p`
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
 `;
 
 const NameSection = styled.div`
@@ -81,6 +177,16 @@ const NameInputRow = styled.div`
   gap: 8px;
 `;
 
+const shakeAndPulse = keyframes`
+  0%   { transform: translateX(0);    border-color: #ef5350; box-shadow: 0 0 0 0 rgba(239,83,80,0.5); }
+  15%  { transform: translateX(-7px); border-color: #ef5350; }
+  30%  { transform: translateX(7px);  border-color: #ef5350; }
+  45%  { transform: translateX(-5px); border-color: #ef5350; }
+  60%  { transform: translateX(5px);  border-color: #ef5350; }
+  75%  { transform: translateX(-3px); border-color: #ef5350; box-shadow: 0 0 0 6px rgba(239,83,80,0); }
+  100% { transform: translateX(0);    border-color: #ef5350; box-shadow: 0 0 0 0 rgba(239,83,80,0); }
+`;
+
 const NameInput = styled.input`
   width: 200px;
   padding: 12px 14px;
@@ -98,6 +204,8 @@ const NameInput = styled.input`
   &:disabled {
     opacity: 0.6;
   }
+
+  ${(props) => props.$shake && css`animation: ${shakeAndPulse} 0.5s ease;`}
 
   @media (max-width: 768px) {
     width: 100%;
@@ -241,23 +349,6 @@ const SaveStatus = styled.span`
   color: var(--accent);
 `;
 
-const TimeFilterSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-
-  @media (max-width: 768px) {
-    gap: 6px;
-  }
-`;
-
-const TimeFilterLabel = styled.span`
-  font-size: 13px;
-  color: var(--text-secondary);
-`;
-
 const TimeSelect = styled.select`
   padding: 8px 12px;
   border: 1px solid var(--border-subtle);
@@ -346,6 +437,34 @@ const ErrorText = styled.p`
   margin-bottom: 12px;
 `;
 
+const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
+
+function getSelectedDaysFromDates(dates) {
+  const selected = [false, false, false, false, false, false, false];
+  (dates || []).forEach((d) => {
+    const dow = new Date(d).getDay(); // 0=Sun
+    const idx = dow === 0 ? 6 : dow - 1; // 0=Mon...6=Sun
+    selected[idx] = true;
+  });
+  return selected;
+}
+
+function getDatesFromSelectedDays(selectedDays, existingDates) {
+  if (!existingDates?.length) return [];
+  const refDate = new Date(existingDates[0]);
+  const dow = refDate.getDay();
+  const monday = new Date(refDate);
+  monday.setDate(refDate.getDate() - (dow === 0 ? 6 : dow - 1));
+  return selectedDays
+    .map((selected, idx) => {
+      if (!selected) return null;
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + idx);
+      return d.toISOString();
+    })
+    .filter(Boolean);
+}
+
 export default function EventPage({ params }) {
   const { eventId } = use(params);
 
@@ -355,13 +474,15 @@ export default function EventPage({ params }) {
   // 참가 상태
   const [nameInput, setNameInput] = useState("");
   const [joined, setJoined] = useState(false);
+  const [nameShake, setNameShake] = useState(false);
+  const nameInputRef = useRef(null);
   const [joinedName, setJoinedName] = useState("");
   const [participantId, setParticipantId] = useState(null);
   const [hasPassword, setHasPassword] = useState(false);
 
   // 비밀번호 모달
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordModalMode, setPasswordModalMode] = useState("verify"); // "verify" | "set"
+  const [passwordModalMode, setPasswordModalMode] = useState("verify");
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [pendingJoinName, setPendingJoinName] = useState("");
@@ -369,16 +490,40 @@ export default function EventPage({ params }) {
   const [myAvailability, setMyAvailability] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [viewStartTime, setViewStartTime] = useState(null);
-  const [viewEndTime, setViewEndTime] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [hiddenNames, setHiddenNames] = useState(new Set());
+
+  // 방장 관련
+  const [adminToken, setAdminToken] = useState(null);
+  const [adminStartTime, setAdminStartTime] = useState(null);
+  const [adminEndTime, setAdminEndTime] = useState(null);
+  const [adminSelectedDays, setAdminSelectedDays] = useState(null);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminSaveMsg, setAdminSaveMsg] = useState(null); // { text, error }
 
   const PARTICIPANT_COLORS = [
     '#4CAF50', '#2196F3', '#FF7043', '#E91E63',
     '#9C27B0', '#00BCD4', '#FF9800', '#607D8B',
+    '#8BC34A', '#F06292', '#26A69A', '#7986CB',
+    '#FFA726', '#AB47BC', '#29B6F6', '#EF5350',
   ];
+
+  // URL에서 admin 토큰 읽기
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("admin");
+    if (token) setAdminToken(token);
+  }, []);
+
+  // event 로드 후 admin 초기값 설정
+  useEffect(() => {
+    if (event && adminToken && adminSelectedDays === null) {
+      setAdminStartTime(event.startTime);
+      setAdminEndTime(event.endTime);
+      setAdminSelectedDays(getSelectedDaysFromDates(event.dates));
+    }
+  }, [event, adminToken, adminSelectedDays]);
 
   const toggleSelectedParticipant = (p) => {
     setSelectedParticipants((prev) => {
@@ -506,13 +651,11 @@ export default function EventPage({ params }) {
         setMyAvailability(data.availability || []);
         setShowPasswordModal(false);
 
-        // 참가자 목록에 반영
         setParticipants((prev) => {
           const others = prev.filter((p) => p.name !== data.name);
           return [...others, { _id: data.participantId, name: data.name, availability: data.availability || [] }];
         });
 
-        // localStorage에 저장
         localStorage.setItem(
           `unj-participant-${eventId}`,
           JSON.stringify({ name: data.name })
@@ -523,7 +666,6 @@ export default function EventPage({ params }) {
     }
   }, [eventId, nameInput]);
 
-  // 실제 저장 함수
   const doSave = useCallback(async (availability) => {
     if (!joinedName) return;
 
@@ -555,7 +697,6 @@ export default function EventPage({ params }) {
     }
   }, [eventId, joinedName, participantId]);
 
-  // 디바운스된 저장
   const saveAvailabilityDebounced = useCallback((newAvailability) => {
     if (!joinedName) return;
 
@@ -573,7 +714,6 @@ export default function EventPage({ params }) {
     }, 500);
   }, [joinedName, doSave]);
 
-  // 컴포넌트 언마운트 시 저장
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -597,30 +737,35 @@ export default function EventPage({ params }) {
     saveAvailabilityDebounced(newAvailability);
   };
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      const textArea = document.createElement('textarea');
-      textArea.value = window.location.href;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleReadOnlyGridClick = () => {
+    setNameShake(true);
+    nameInputRef.current?.focus();
+    setTimeout(() => setNameShake(false), 500);
   };
 
-  // 이름 입력 후 참가
+  const copyText = async (text, setFlag) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setFlag(true);
+    setTimeout(() => setFlag(false), 2000);
+  };
+
+  const handleCopyShareLink = () => copyText(window.location.origin + "/" + eventId, setCopied);
+  const handleCopyAdminLink = () => copyText(window.location.href, setCopiedAdmin);
+
   const handleNameSubmit = (e) => {
     e.preventDefault();
     handleJoin();
   };
 
-  // 로그아웃 (이 방에서 나가기)
   const handleSignOut = () => {
     setJoined(false);
     setJoinedName("");
@@ -631,7 +776,6 @@ export default function EventPage({ params }) {
     localStorage.removeItem(`unj-participant-${eventId}`);
   };
 
-  // 비밀번호 설정
   const handleSetPassword = async () => {
     if (!passwordInput || passwordInput.length < 4) {
       setPasswordError("비밀번호는 4자 이상이어야 합니다");
@@ -663,17 +807,61 @@ export default function EventPage({ params }) {
     }
   };
 
-  // 비밀번호 검증 후 참가
   const handleVerifyPassword = () => {
     handleJoin(pendingJoinName, passwordInput);
   };
 
-  // 비밀번호 설정 모달 열기
   const openSetPasswordModal = () => {
     setPasswordModalMode("set");
     setPasswordInput("");
     setPasswordError("");
     setShowPasswordModal(true);
+  };
+
+  const handleAdminSave = async () => {
+    if (!adminSelectedDays?.some(Boolean)) {
+      setAdminSaveMsg({ text: "최소 1일을 선택해야 합니다", error: true });
+      return;
+    }
+    if (adminStartTime >= adminEndTime) {
+      setAdminSaveMsg({ text: "시작 시간은 종료 시간보다 빨라야 합니다", error: true });
+      return;
+    }
+
+    setAdminSaving(true);
+    setAdminSaveMsg(null);
+
+    try {
+      const newDates = getDatesFromSelectedDays(adminSelectedDays, event.dates);
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminToken,
+          startTime: adminStartTime,
+          endTime: adminEndTime,
+          dates: newDates,
+        }),
+      });
+
+      if (res.ok) {
+        setEvent((prev) => ({
+          ...prev,
+          startTime: adminStartTime,
+          endTime: adminEndTime,
+          dates: newDates,
+        }));
+        setAdminSaveMsg({ text: "저장됨", error: false });
+        setTimeout(() => setAdminSaveMsg(null), 2000);
+      } else {
+        const data = await res.json();
+        setAdminSaveMsg({ text: data.error || "저장 실패", error: true });
+      }
+    } catch {
+      setAdminSaveMsg({ text: "저장 실패", error: true });
+    } finally {
+      setAdminSaving(false);
+    }
   };
 
   if (loading) {
@@ -688,31 +876,81 @@ export default function EventPage({ params }) {
     <Container>
       <PageHeader>
         <Title>{event.name}</Title>
-        <CopyButton onClick={handleCopyLink}>
-          {copied ? "✓ 복사됨" : "링크 복사"}
-        </CopyButton>
+        <HeaderButtons>
+          {adminToken && (
+            <CopyButton onClick={handleCopyAdminLink}>
+              {copiedAdmin ? "✓ 방장 링크 복사됨" : "방장 링크 복사"}
+            </CopyButton>
+          )}
+          <CopyButton onClick={handleCopyShareLink}>
+            {copied ? "✓ 복사됨" : "공유 링크 복사"}
+          </CopyButton>
+        </HeaderButtons>
       </PageHeader>
 
-      <TimeFilterSection>
-        <TimeFilterLabel>시간 범위:</TimeFilterLabel>
-        <TimeSelect
-          value={viewStartTime ?? event.startTime}
-          onChange={(e) => setViewStartTime(Number(e.target.value))}
-        >
-          {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-            <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </TimeSelect>
-        <span>~</span>
-        <TimeSelect
-          value={viewEndTime ?? event.endTime}
-          onChange={(e) => setViewEndTime(Number(e.target.value))}
-        >
-          {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
-            <option key={h} value={h}>{`${h.toString().padStart(2, '0')}:00`}</option>
-          ))}
-        </TimeSelect>
-      </TimeFilterSection>
+      {adminToken && adminSelectedDays && (
+        <AdminPanel>
+          <AdminPanelTitle>방장 설정</AdminPanelTitle>
+
+          <AdminRow>
+            <AdminLabel>시간 범위</AdminLabel>
+            <TimeSelect
+              value={adminStartTime}
+              onChange={(e) => setAdminStartTime(Number(e.target.value))}
+            >
+              {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
+              ))}
+            </TimeSelect>
+            <span style={{ color: "var(--text-muted)", fontSize: 14 }}>~</span>
+            <TimeSelect
+              value={adminEndTime}
+              onChange={(e) => setAdminEndTime(Number(e.target.value))}
+            >
+              {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+                <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
+              ))}
+            </TimeSelect>
+          </AdminRow>
+
+          <AdminRow>
+            <AdminLabel>요일</AdminLabel>
+            <AdminDayToggleRow>
+              {DAY_LABELS.map((day, idx) => (
+                <AdminDayBtn
+                  key={idx}
+                  type="button"
+                  $selected={adminSelectedDays[idx]}
+                  onClick={() =>
+                    setAdminSelectedDays((prev) => {
+                      const next = [...prev];
+                      next[idx] = !next[idx];
+                      return next;
+                    })
+                  }
+                >
+                  {day}
+                </AdminDayBtn>
+              ))}
+            </AdminDayToggleRow>
+          </AdminRow>
+
+          <AdminSaveRow>
+            <AdminSaveBtn onClick={handleAdminSave} disabled={adminSaving}>
+              {adminSaving ? "저장 중..." : "설정 저장"}
+            </AdminSaveBtn>
+            {adminSaveMsg && (
+              <AdminSaveMsg $error={adminSaveMsg.error}>{adminSaveMsg.text}</AdminSaveMsg>
+            )}
+          </AdminSaveRow>
+
+          {participants.length > 0 && (
+            <AdminNote>
+              ※ 참가자가 있는 상태에서 날짜를 변경하면 기존 일정 데이터가 맞지 않을 수 있습니다.
+            </AdminNote>
+          )}
+        </AdminPanel>
+      )}
 
       <NameSection>
         {!joined ? (
@@ -721,10 +959,12 @@ export default function EventPage({ params }) {
             <form onSubmit={handleNameSubmit}>
               <NameInputRow>
                 <NameInput
+                  ref={nameInputRef}
                   type="text"
                   placeholder="이름"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
+                  $shake={nameShake}
                   autoFocus
                 />
                 <JoinButton type="submit" disabled={!nameInput.trim()}>
@@ -801,17 +1041,18 @@ export default function EventPage({ params }) {
       <GridsContainer>
         <AvailabilityGrid
           dates={event.dates}
-          startTime={viewStartTime ?? event.startTime}
-          endTime={viewEndTime ?? event.endTime}
+          startTime={event.startTime}
+          endTime={event.endTime}
           availability={myAvailability}
           onChange={handleAvailabilityChange}
           readOnly={!joined}
+          onReadOnlyClick={handleReadOnlyGridClick}
         />
 
         <GroupResultGrid
           dates={event.dates}
-          startTime={viewStartTime ?? event.startTime}
-          endTime={viewEndTime ?? event.endTime}
+          startTime={event.startTime}
+          endTime={event.endTime}
           participants={visibleParticipants}
           selectedParticipants={selectedParticipants.map((sp, idx) => ({
             ...sp,
@@ -820,7 +1061,6 @@ export default function EventPage({ params }) {
         />
       </GridsContainer>
 
-      {/* 내 일정 Import/Export 플로팅 버튼 */}
       {joined && (
         <ScheduleImportExport
           event={event}
@@ -829,7 +1069,6 @@ export default function EventPage({ params }) {
         />
       )}
 
-      {/* 비밀번호 모달 */}
       {showPasswordModal && (
         <Overlay onClick={() => setShowPasswordModal(false)}>
           <Modal onClick={(e) => e.stopPropagation()}>

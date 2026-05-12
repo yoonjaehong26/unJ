@@ -2,7 +2,7 @@
  * 가용시간 그리드 (일주일 단위, 30분 단위)
  * - mode="event": 이벤트별 날짜 기반 (dateIdx 필드 사용)
  * - mode="personal": 요일 기반 (dayOfWeek 필드 사용, 날짜 헤더 없음)
- * - 가능: 초록색, 조정가능: 노란색
+ * - 가능: 초록색, 미정(참여 희망): 노란색
  * - 모바일 터치 지원
  */
 "use client";
@@ -46,28 +46,6 @@ const ModeToggle = styled.div`
   padding: 3px;
 `;
 
-const SubToggle = styled.div`
-  display: flex;
-  gap: 2px;
-  margin-top: 4px;
-  justify-content: flex-end;
-`;
-
-const SubButton = styled.button`
-  padding: 3px 10px;
-  border: 1px solid ${(props) => (props.$active ? props.$color : "var(--border-subtle)")};
-  border-radius: 4px;
-  background: ${(props) => (props.$active ? props.$color + "22" : "transparent")};
-  color: ${(props) => (props.$active ? props.$color : "var(--text-muted)")};
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    border-color: ${(props) => props.$color};
-    color: ${(props) => props.$color};
-  }
-`;
 
 const ModeButton = styled.button`
   display: flex;
@@ -95,14 +73,14 @@ const ModeButton = styled.button`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 50px repeat(7, minmax(40px, 1fr));
+  grid-template-columns: 50px repeat(${(props) => props.$cols}, minmax(40px, 1fr));
   gap: 2px;
   user-select: none;
   touch-action: none;
-  min-width: 330px;
+  min-width: ${(props) => 50 + props.$cols * 40}px;
 
   @media (max-width: 768px) {
-    grid-template-columns: 40px repeat(7, minmax(36px, 1fr));
+    grid-template-columns: 40px repeat(${(props) => props.$cols}, minmax(36px, 1fr));
     gap: 1px;
   }
 `;
@@ -189,6 +167,12 @@ const HalfHourCell = styled.div`
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
+const DAY_OF_WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function getDayLabel(dateStr) {
+  return DAY_OF_WEEK_LABELS[new Date(dateStr).getDay()];
+}
+
 export default function AvailabilityGrid({
   dates = [],
   startTime = 0,
@@ -196,6 +180,7 @@ export default function AvailabilityGrid({
   availability = [],
   onChange,
   readOnly = false,
+  onReadOnlyClick,
   mode = "event", // "event" | "personal"
   gridTitle,
 }) {
@@ -204,8 +189,6 @@ export default function AvailabilityGrid({
   const [dragColumn, setDragColumn] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [selectionMode, setSelectionMode] = useState("available");
-  // "maybe" | "online" | "offline" — 노란색 슬롯의 의미
-  const [flexType, setFlexType] = useState("maybe");
   const gridRef = useRef(null);
 
   // 탭 vs 드래그 구분용 refs
@@ -214,7 +197,8 @@ export default function AvailabilityGrid({
   const touchStartSlotRef = useRef(null);
   const startDragRef = useRef(null);
 
-  const colKeys = Array.from({ length: 7 }, (_, i) => i); // 0-6
+  const numCols = mode === "personal" ? 7 : Math.min(dates.length, 7);
+  const colKeys = Array.from({ length: numCols }, (_, i) => i);
 
   const hours = [];
   for (let h = startTime; h < endTime; h++) {
@@ -260,7 +244,7 @@ export default function AvailabilityGrid({
   }, [availability, onChange, selectionMode, startTime, mode]);
 
   const startDrag = (colKey, hour, minute) => {
-    if (readOnly) return;
+    if (readOnly) { onReadOnlyClick?.(); return; }
     const field = mode === "personal" ? "dayOfWeek" : "dateIdx";
 
     setIsDragging(true);
@@ -378,51 +362,39 @@ export default function AvailabilityGrid({
     >
       <Header>
         <GridTitle>{title}</GridTitle>
-        {!readOnly && (() => {
-          const flexLabels = {
-            maybe: "조정가능",
-            online: "온라인만가능",
-          };
-          const isFlexActive = selectionMode !== "available";
-          return (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <ModeToggle>
-                <ModeButton
-                  $active={!isFlexActive}
-                  $color="var(--accent)"
-                  onClick={() => setSelectionMode("available")}
-                >
-                  가능
-                </ModeButton>
-                <ModeButton
-                  $active={isFlexActive}
-                  $color={flexType === "online" ? "#53C3F3" : "#F5A623"}
-                  onClick={() => setSelectionMode(flexType)}
-                >
-                  {flexLabels[flexType]}
-                </ModeButton>
-              </ModeToggle>
-              <SubToggle>
-                {Object.entries(flexLabels).map(([key, label]) => (
-                  <SubButton
-                    key={key}
-                    $active={flexType === key}
-                    $color={key === "online" ? "#53C3F3" : "#F5A623"}
-                    onClick={() => { setFlexType(key); setSelectionMode(key); }}
-                  >
-                    {label}
-                  </SubButton>
-                ))}
-              </SubToggle>
-            </div>
-          );
-        })()}
+        {!readOnly && (
+          <ModeToggle>
+            <ModeButton
+              $active={selectionMode === "available"}
+              $color="var(--accent)"
+              onClick={() => setSelectionMode("available")}
+            >
+              가능
+            </ModeButton>
+            <ModeButton
+              $active={selectionMode === "online"}
+              $color="#53C3F3"
+              onClick={() => setSelectionMode("online")}
+            >
+              온라인만가능
+            </ModeButton>
+            <ModeButton
+              $active={selectionMode === "maybe"}
+              $color="#F5A623"
+              onClick={() => setSelectionMode("maybe")}
+            >
+              미정
+            </ModeButton>
+          </ModeToggle>
+        )}
       </Header>
 
-      <Grid>
+      <Grid $cols={numCols}>
         <HeaderCell />
         {colKeys.map((colKey) => (
-          <DayHeader key={colKey}>{DAYS[colKey]}</DayHeader>
+          <DayHeader key={colKey}>
+            {mode === "event" && dates[colKey] ? getDayLabel(dates[colKey]) : DAYS[colKey]}
+          </DayHeader>
         ))}
 
         {mode === "event" && (

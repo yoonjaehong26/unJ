@@ -131,9 +131,6 @@ const LegendColor = styled.div`
   height: 14px;
   border-radius: 3px;
   background: ${(props) => props.$color || "transparent"};
-  ${(props) => props.$border && `
-    border: 2px solid ${props.$border};
-  `}
 `;
 
 const LegendGradientBar = styled.div`
@@ -143,23 +140,15 @@ const LegendGradientBar = styled.div`
   background: linear-gradient(90deg, var(--bg-secondary) 0%, rgba(76,175,80,1) 100%);
 `;
 
-const LegendBorderBox = styled.div`
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: rgba(76, 175, 80, 0.7);
-  box-shadow: inset 0 0 0 2px #FFFFFF;
-`;
-
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 50px repeat(7, minmax(40px, 1fr));
+  grid-template-columns: 50px repeat(${(props) => props.$cols}, minmax(40px, 1fr));
   gap: 2px;
   user-select: none;
-  min-width: 330px;
+  min-width: ${(props) => 50 + props.$cols * 40}px;
 
   @media (max-width: 768px) {
-    grid-template-columns: 40px repeat(7, minmax(36px, 1fr));
+    grid-template-columns: 40px repeat(${(props) => props.$cols}, minmax(36px, 1fr));
     gap: 1px;
   }
 `;
@@ -197,6 +186,12 @@ const HourGroup = styled.div`
   gap: 0;
 `;
 
+const HIGHLIGHT_VARS = {
+  green: 'var(--highlight-green)',
+  blue: 'var(--highlight-blue)',
+  yellow: 'var(--highlight-yellow)',
+};
+
 const HalfHourCell = styled.div`
   height: 24px;
   background: ${(props) => {
@@ -212,24 +207,24 @@ const HalfHourCell = styled.div`
       const flexColor = maybe > 0 ? "245, 166, 35" : "83, 195, 243";
       const flexIntensity = Math.min(anyFlexible / props.$total, 1);
       return `linear-gradient(90deg,
-        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 0%,
-        rgba(76, 175, 80, ${0.3 + greenIntensity * 0.7}) 50%,
-        rgba(${flexColor}, ${0.3 + flexIntensity * 0.7}) 50%,
-        rgba(${flexColor}, ${0.3 + flexIntensity * 0.7}) 100%)`;
+        rgba(76, 175, 80, ${0.5 + greenIntensity * 0.5}) 0%,
+        rgba(76, 175, 80, ${0.5 + greenIntensity * 0.5}) 50%,
+        rgba(${flexColor}, ${0.5 + flexIntensity * 0.5}) 50%,
+        rgba(${flexColor}, ${0.5 + flexIntensity * 0.5}) 100%)`;
     }
 
     if (onlineOnly > 0 && maybe === 0) {
       const intensity = Math.min(onlineOnly / props.$total, 1);
-      return `rgba(83, 195, 243, ${0.3 + intensity * 0.7})`;
+      return `rgba(83, 195, 243, ${0.5 + intensity * 0.5})`;
     }
 
     if (maybe > 0) {
       const intensity = Math.min(maybe / props.$total, 1);
-      return `rgba(245, 166, 35, ${0.3 + intensity * 0.7})`;
+      return `rgba(245, 166, 35, ${0.5 + intensity * 0.5})`;
     }
 
     const intensity = Math.min(available / props.$total, 1);
-    return `rgba(76, 175, 80, ${0.2 + intensity * 0.8})`;
+    return `rgba(76, 175, 80, ${0.5 + intensity * 0.5})`;
   }};
   cursor: pointer;
   position: relative;
@@ -245,28 +240,24 @@ const HalfHourCell = styled.div`
   ${(props) => {
     if (!props.$borderSides || !props.$borderColor) return '';
     const color = props.$borderColor;
-
-    let shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}`;
+    let shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}`;
     let radius = '';
-
     if (props.$borderTop && props.$borderBottom) {
-      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 5px 0 ${color}, inset 0 -5px 0 ${color}`;
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}, inset 0 -3px 0 ${color}`;
       radius = 'border-radius: 4px;';
     } else if (props.$borderTop) {
-      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 5px 0 ${color}`;
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 3px 0 ${color}`;
       radius = 'border-top-left-radius: 4px; border-top-right-radius: 4px;';
     } else if (props.$borderBottom) {
-      shadow = `inset 5px 0 0 ${color}, inset -5px 0 0 ${color}, inset 0 -5px 0 ${color}`;
+      shadow = `inset 3px 0 0 ${color}, inset -3px 0 0 ${color}, inset 0 -3px 0 ${color}`;
       radius = 'border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;';
     }
-
     return `box-shadow: ${shadow}; ${radius}`;
   }}
 
   ${(props) => props.$dimmed && `
     opacity: 0.12;
   `}
-
 
   &:hover {
     opacity: ${(props) => props.$dimmed ? 0.12 : 0.8};
@@ -304,19 +295,11 @@ const Tooltip = styled.div`
 
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
-// 여러 hex 색상을 RGB 평균으로 혼합
-function blendColors(colors) {
-  if (!colors.length) return "#FFFFFF";
-  if (colors.length === 1) return colors[0];
-  const parsed = colors.map((hex) => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ]);
-  const avg = parsed
-    .reduce((acc, [r, g, b]) => [acc[0] + r, acc[1] + g, acc[2] + b], [0, 0, 0])
-    .map((v) => Math.round(v / parsed.length));
-  return `rgb(${avg[0]}, ${avg[1]}, ${avg[2]})`;
+const DAY_OF_WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function getDayLabel(dateStr) {
+  const date = new Date(dateStr);
+  return DAY_OF_WEEK_LABELS[date.getDay()];
 }
 
 export default function GroupResultGrid({
@@ -327,9 +310,7 @@ export default function GroupResultGrid({
   selectedParticipants = [],
 }) {
   const [tooltip, setTooltip] = useState(null);
-  const [minSlots, setMinSlots] = useState(0);
   const [minPeople, setMinPeople] = useState(null);
-  const [slotsDropdownOpen, setSlotsDropdownOpen] = useState(false);
   const [peopleDropdownOpen, setPeopleDropdownOpen] = useState(false);
 
   const hours = [];
@@ -340,17 +321,16 @@ export default function GroupResultGrid({
   const totalParticipants = participants.length;
   const requiredPeople = minPeople === null ? totalParticipants : minPeople;
 
-  // flexible = online + offline + maybe(backward compat)
   const getCounts = (dateIdx, hour, minute) => {
     let available = 0;
-    let maybe = 0;   // 조정가능 (yellow)
-    let onlineOnly = 0; // 온라인만가능 (gray)
+    let maybe = 0;
+    let onlineOnly = 0;
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
         if (slot.status === "available") available++;
         else if (slot.status === "online") onlineOnly++;
-        else maybe++; // offline, maybe (backward compat) → 조정가능
+        else maybe++;
       }
     });
     return { available, maybe, onlineOnly, total: available + maybe + onlineOnly };
@@ -365,27 +345,20 @@ export default function GroupResultGrid({
       if (slot) {
         if (slot.status === "available") availableNames.push(p.name);
         else if (slot.status === "online") onlineOnlyNames.push(p.name);
-        else maybeNames.push(p.name); // offline, maybe → 조정가능
+        else maybeNames.push(p.name);
       }
     });
     return { availableNames, maybeNames, onlineOnlyNames };
   };
 
-  // 전원 가능 (available only) 여부
-  const isAllAvailable = (dateIdx, hour, minute) => {
-    if (totalParticipants < 2) return false;
-    return participants.every(p =>
-      p.availability?.some(a =>
-        a.dateIdx === dateIdx && a.hour === hour && a.minute === minute && a.status === "available"
-      )
-    );
-  };
-
-  // 선택된 참가자 모두가 이 슬롯을 가지고 있는지 (교집합)
-  const isSlotSelected = (dateIdx, hour, minute) => {
-    return selectedParticipants.every(p =>
-      p.availability?.some(a => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute)
-    );
+  // 기준 인원 달성 여부 및 색상 반환: green(가능만) | blue(온라인 포함) | yellow(조정 포함) | null
+  const getHighlightColor = (dateIdx, hour, minute) => {
+    if (totalParticipants < 2 || requiredPeople === 0) return null;
+    const { available, maybe, onlineOnly } = getCounts(dateIdx, hour, minute);
+    if (available >= requiredPeople) return 'green';
+    if (available + onlineOnly >= requiredPeople) return 'blue';
+    if (available + onlineOnly + maybe >= requiredPeople) return 'yellow';
+    return null;
   };
 
   const slotToIndex = (hour, minute) => (hour - startTime) * 2 + (minute === 30 ? 1 : 0);
@@ -396,111 +369,31 @@ export default function GroupResultGrid({
   };
   const totalSlots = (endTime - startTime) * 2;
 
-  const isHighlightedGreen = (dateIdx, hour, minute) => {
-    if (minSlots === 0) return false;
-    if (requiredPeople === 0) return false;
-
-    const currentIdx = slotToIndex(hour, minute);
-
-    for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
-      let enoughAvailable = true;
-      for (let i = startIdx; i < startIdx + minSlots; i++) {
-        if (i >= totalSlots) { enoughAvailable = false; break; }
-        const { hour: h, minute: m } = indexToSlot(i);
-        if (getCounts(dateIdx, h, m).available < requiredPeople) { enoughAvailable = false; break; }
-      }
-      if (enoughAvailable) return true;
-    }
-    return false;
-  };
-
-  const isHighlightedYellow = (dateIdx, hour, minute) => {
-    if (minSlots === 0) return false;
-    if (requiredPeople === 0) return false;
-
-    const currentIdx = slotToIndex(hour, minute);
-
-    for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
-      let enoughTotal = true;
-      for (let i = startIdx; i < startIdx + minSlots; i++) {
-        if (i >= totalSlots) { enoughTotal = false; break; }
-        const { hour: h, minute: m } = indexToSlot(i);
-        const c = getCounts(dateIdx, h, m);
-        // 온라인만가능(onlineOnly)은 조정가능 카운트에 포함하지 않음
-        if (c.available + c.maybe < requiredPeople) { enoughTotal = false; break; }
-      }
-      if (enoughTotal) return true;
-    }
-    return false;
-  };
-
-  // 온라인만가능 포함 전체 합산 연속 체크 (파란 테두리용)
-  const isHighlightedBlue = (dateIdx, hour, minute) => {
-    if (minSlots === 0) return false;
-    if (requiredPeople === 0) return false;
-
-    const currentIdx = slotToIndex(hour, minute);
-
-    for (let startIdx = Math.max(0, currentIdx - minSlots + 1); startIdx <= currentIdx; startIdx++) {
-      let enough = true;
-      for (let i = startIdx; i < startIdx + minSlots; i++) {
-        if (i >= totalSlots) { enough = false; break; }
-        const { hour: h, minute: m } = indexToSlot(i);
-        if (getCounts(dateIdx, h, m).total < requiredPeople) { enough = false; break; }
-      }
-      if (enough) return true;
-    }
-    return false;
-  };
-
   const getBorderInfo = (dateIdx, hour, minute) => {
-    const isGreen = isHighlightedGreen(dateIdx, hour, minute);
-    const isYellow = isHighlightedYellow(dateIdx, hour, minute);
-    const isBlue = !isYellow && isHighlightedBlue(dateIdx, hour, minute);
-    const allAvail = isAllAvailable(dateIdx, hour, minute);
+    const highlightKey = getHighlightColor(dateIdx, hour, minute);
+    if (!highlightKey) return { borderTop: false, borderBottom: false, borderSides: false, borderColor: null };
 
-    if (!isGreen && !isYellow && !isBlue && !allAvail) {
-      return { borderTop: false, borderBottom: false, borderSides: false, borderColor: null };
-    }
-
-    let borderColor;
-    let checkFn;
-
-    if (isGreen) {
-      borderColor = '#00E676';
-      checkFn = (d, h, m) => isHighlightedGreen(d, h, m);
-    } else if (isYellow) {
-      borderColor = '#FFD600';
-      checkFn = (d, h, m) => isHighlightedYellow(d, h, m);
-    } else if (isBlue) {
-      borderColor = '#53C3F3';
-      checkFn = (d, h, m) => !isHighlightedYellow(d, h, m) && isHighlightedBlue(d, h, m);
-    } else {
-      // 전원 가능 default border
-      borderColor = '#FFFFFF';
-      checkFn = (d, h, m) => isAllAvailable(d, h, m);
-    }
-
+    const color = HIGHLIGHT_VARS[highlightKey];
     const currentIdx = slotToIndex(hour, minute);
 
     let prevHighlighted = false;
     if (currentIdx > 0) {
       const { hour: prevH, minute: prevM } = indexToSlot(currentIdx - 1);
-      prevHighlighted = checkFn(dateIdx, prevH, prevM);
+      prevHighlighted = !!getHighlightColor(dateIdx, prevH, prevM);
     }
-
     let nextHighlighted = false;
     if (currentIdx < totalSlots - 1) {
       const { hour: nextH, minute: nextM } = indexToSlot(currentIdx + 1);
-      nextHighlighted = checkFn(dateIdx, nextH, nextM);
+      nextHighlighted = !!getHighlightColor(dateIdx, nextH, nextM);
     }
 
-    return {
-      borderTop: !prevHighlighted,
-      borderBottom: !nextHighlighted,
-      borderSides: true,
-      borderColor,
-    };
+    return { borderTop: !prevHighlighted, borderBottom: !nextHighlighted, borderSides: true, borderColor: HIGHLIGHT_VARS[highlightKey] };
+  };
+
+  const isSlotSelected = (dateIdx, hour, minute) => {
+    return selectedParticipants.every((p) =>
+      p.availability?.some((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute)
+    );
   };
 
   const handleMouseEnter = (e, dateIdx, hour, minute) => {
@@ -522,45 +415,21 @@ export default function GroupResultGrid({
   const formatHour = (h) => `${h.toString().padStart(2, "0")}:00`;
   const formatDate = (date) => new Date(date).getDate() + "일";
 
+  const numCols = Math.min(dates.length, 7);
+  const allAvailLabel = minPeople === null || minPeople === totalParticipants
+    ? "전원 가능"
+    : `${requiredPeople}명 이상 가능`;
+
   return (
     <Container>
       <Header>
         <GridTitle>그룹 결과 ({totalParticipants}명)</GridTitle>
-        <FilterContainer>
-          <FilterLabel>연속:</FilterLabel>
-          <DropdownWrapper>
-            <DropdownTrigger onClick={() => { setSlotsDropdownOpen(!slotsDropdownOpen); setPeopleDropdownOpen(false); }}>
-              {minSlots === 0 ? '전체' : (() => {
-                const h = Math.floor(minSlots / 2);
-                const m = (minSlots % 2) * 30;
-                return h > 0 ? (m > 0 ? `${h}시간 ${m}분+` : `${h}시간+`) : `${m}분+`;
-              })()}
-            </DropdownTrigger>
-            {slotsDropdownOpen && (
-              <DropdownMenu>
-                <DropdownItem $active={minSlots === 0} onClick={() => { setMinSlots(0); setSlotsDropdownOpen(false); }}>
-                  전체
-                </DropdownItem>
-                {Array.from({ length: (endTime - startTime) * 2 }, (_, i) => i + 1).map((slots) => {
-                  const h = Math.floor(slots / 2);
-                  const m = (slots % 2) * 30;
-                  const label = h > 0 ? (m > 0 ? `${h}시간 ${m}분+` : `${h}시간+`) : `${m}분+`;
-                  return (
-                    <DropdownItem key={slots} $active={minSlots === slots} onClick={() => { setMinSlots(slots); setSlotsDropdownOpen(false); }}>
-                      {label}
-                    </DropdownItem>
-                  );
-                })}
-              </DropdownMenu>
-            )}
-          </DropdownWrapper>
-        </FilterContainer>
 
         {totalParticipants > 1 && (
           <FilterContainer>
             <FilterLabel>인원:</FilterLabel>
             <DropdownWrapper>
-              <DropdownTrigger onClick={() => { setPeopleDropdownOpen(!peopleDropdownOpen); setSlotsDropdownOpen(false); }}>
+              <DropdownTrigger onClick={() => setPeopleDropdownOpen(!peopleDropdownOpen)}>
                 {minPeople === null ? `전체 (${totalParticipants}명)` : `${minPeople}명 이상`}
               </DropdownTrigger>
               {peopleDropdownOpen && (
@@ -587,7 +456,7 @@ export default function GroupResultGrid({
         </LegendItem>
         <LegendItem>
           <LegendColor $color="rgba(245, 166, 35, 0.7)" />
-          <span>조정가능</span>
+          <span>미정</span>
         </LegendItem>
         <LegendItem>
           <LegendColor $color="rgba(83, 195, 243, 0.7)" />
@@ -595,16 +464,20 @@ export default function GroupResultGrid({
         </LegendItem>
         {totalParticipants >= 2 && (
           <LegendItem>
-            <LegendBorderBox />
-            <span>전원 가능</span>
+            <div style={{ display: 'flex', gap: 2, marginRight: 2 }}>
+              <LegendColor $color={HIGHLIGHT_VARS.green} />
+              <LegendColor $color={HIGHLIGHT_VARS.blue} />
+              <LegendColor $color={HIGHLIGHT_VARS.yellow} />
+            </div>
+            <span>{allAvailLabel}</span>
           </LegendItem>
         )}
       </Legend>
 
-      <Grid>
+      <Grid $cols={numCols}>
         <HeaderCell />
         {dates.slice(0, 7).map((date, i) => (
-          <DayHeader key={i}>{DAYS[i]}</DayHeader>
+          <DayHeader key={i}>{getDayLabel(date)}</DayHeader>
         ))}
 
         <HeaderCell />
@@ -628,7 +501,7 @@ export default function GroupResultGrid({
                 if (!colors.length) return 'none';
                 const n = colors.length;
                 const stops = colors.map((c, i) => `${c} ${(i/n)*100}% ${((i+1)/n)*100}%`).join(', ');
-                return `linear-gradient(to right, ${stops})`;
+                return `linear-gradient(to bottom, ${stops})`;
               };
               return (
                 <HourGroup key={`${dateIdx}-${hour}`}>
@@ -652,7 +525,7 @@ export default function GroupResultGrid({
                       </SplitContent>
                     ) : counts00.total > 0 ? counts00.total : ""}
                     {sel00 && selColors.length > 0 && (
-                      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background: makeStripe(selColors), pointerEvents:'none' }} />
+                      <div style={{ position:'absolute', top:0, left:0, bottom:0, width:4, background: makeStripe(selColors), pointerEvents:'none' }} />
                     )}
                   </HalfHourCell>
                   <HalfHourCell
@@ -675,7 +548,7 @@ export default function GroupResultGrid({
                       </SplitContent>
                     ) : counts30.total > 0 ? counts30.total : ""}
                     {sel30 && selColors.length > 0 && (
-                      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:3, background: makeStripe(selColors), pointerEvents:'none' }} />
+                      <div style={{ position:'absolute', top:0, left:0, bottom:0, width:4, background: makeStripe(selColors), pointerEvents:'none' }} />
                     )}
                   </HalfHourCell>
                 </HourGroup>
@@ -695,7 +568,7 @@ export default function GroupResultGrid({
           )}
           {tooltip.maybeNames.length > 0 && (
             <div style={{ marginTop: 4, color: "#F5A623" }}>
-              조정가능 ({tooltip.maybeNames.length}): {tooltip.maybeNames.join(", ")}
+              미정 ({tooltip.maybeNames.length}): {tooltip.maybeNames.join(", ")}
             </div>
           )}
           {tooltip.onlineOnlyNames.length > 0 && (
