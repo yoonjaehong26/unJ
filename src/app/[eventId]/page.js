@@ -476,7 +476,8 @@ export default function EventPage({ params }) {
   const [joined, setJoined] = useState(false);
   const [nameShake, setNameShake] = useState(false);
   const nameInputRef = useRef(null);
-  const [joinedName, setJoinedName] = useState("");
+  const [joinedName, setJoinedName] = useState("");       // 실명 (localStorage 복원용)
+  const [myDisplayName, setMyDisplayName] = useState(""); // UI 표시용 이름 (익명 모드 시 별칭 포함)
   const [participantId, setParticipantId] = useState(null);
   const [hasPassword, setHasPassword] = useState(false);
 
@@ -527,34 +528,43 @@ export default function EventPage({ params }) {
 
   const toggleSelectedParticipant = (p) => {
     setSelectedParticipants((prev) => {
-      const isSelected = prev.some((sp) => sp.name === p.name);
-      if (isSelected) return prev.filter((sp) => sp.name !== p.name);
+      const isSelected = prev.some((sp) => sp._id === p._id);
+      if (isSelected) return prev.filter((sp) => sp._id !== p._id);
       return [...prev, p];
     });
   };
 
-  const toggleHidden = (name) => {
+  const toggleHidden = (id) => {
     setHiddenNames((prev) => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
-    setSelectedParticipants((prev) => prev.filter((sp) => sp.name !== name));
+    setSelectedParticipants((prev) => prev.filter((sp) => sp._id !== id));
   };
 
-  const visibleParticipants = participants.filter((p) => !hiddenNames.has(p.name));
+  const visibleParticipants = participants.filter((p) => !hiddenNames.has(p._id));
 
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
+
+  const buildParticipantsUrl = useCallback((token, pId) => {
+    const params = new URLSearchParams();
+    if (token) params.set("adminToken", token);
+    if (pId) params.set("participantId", pId);
+    const qs = params.toString();
+    return `/api/events/${eventId}/participants${qs ? `?${qs}` : ""}`;
+  }, [eventId]);
 
   // 이벤트 및 참가자 로드
   useEffect(() => {
     async function load() {
       try {
+        const token = new URLSearchParams(window.location.search).get("admin");
         const [eventRes, participantsRes] = await Promise.all([
           fetch(`/api/events/${eventId}`),
-          fetch(`/api/events/${eventId}/participants`),
+          fetch(buildParticipantsUrl(token, null)),
         ]);
 
         if (eventRes.ok) {
@@ -570,7 +580,7 @@ export default function EventPage({ params }) {
       }
     }
     load();
-  }, [eventId]);
+  }, [eventId, buildParticipantsUrl]);
 
   // localStorage에서 참가 상태 복원 → 자동 join
   useEffect(() => {
@@ -593,14 +603,13 @@ export default function EventPage({ params }) {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/events/${eventId}/participants`);
+        const res = await fetch(buildParticipantsUrl(adminToken, participantId));
         if (res.ok) {
           const data = await res.json();
-          const currentName = joinedName;
-          if (currentName) {
+          if (participantId) {
             setParticipants((prev) => {
-              const others = data.filter((p) => p.name !== currentName);
-              const me = prev.find((p) => p.name === currentName);
+              const others = data.filter((p) => p._id !== participantId);
+              const me = prev.find((p) => p._id === participantId);
               return me ? [...others, me] : data;
             });
           } else {
@@ -613,7 +622,7 @@ export default function EventPage({ params }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [eventId, joinedName]);
+  }, [eventId, adminToken, participantId, buildParticipantsUrl]);
 
   // join API 호출
   const handleJoin = useCallback(async (name, password) => {
@@ -646,15 +655,19 @@ export default function EventPage({ params }) {
       if (data.status === "ok") {
         setJoined(true);
         setJoinedName(data.name);
+        setMyDisplayName(data.displayName || data.name);
         setParticipantId(data.participantId);
         setHasPassword(data.hasPassword);
         setMyAvailability(data.availability || []);
         setShowPasswordModal(false);
 
-        setParticipants((prev) => {
-          const others = prev.filter((p) => p.name !== data.name);
-          return [...others, { _id: data.participantId, name: data.name, availability: data.availability || [] }];
-        });
+        // 참가자 목록을 participantId로 다시 조회해서 최신 displayName 반영
+        fetch(buildParticipantsUrl(adminToken, data.participantId))
+          .then((r) => r.ok ? r.json() : null)
+          .then((fresh) => {
+            if (fresh) setParticipants(fresh);
+          })
+          .catch(() => {});
 
         localStorage.setItem(
           `unj-participant-${eventId}`,
@@ -683,8 +696,9 @@ export default function EventPage({ params }) {
 
       if (res.ok) {
         setParticipants((prev) => {
-          const others = prev.filter((p) => p.name !== joinedName);
-          const myData = { _id: participantId, name: joinedName, availability };
+          const others = prev.filter((p) => p._id !== participantId);
+          const me = prev.find((p) => p._id === participantId);
+          const myData = { ...(me || {}), _id: participantId, availability };
           return [...others, myData];
         });
       } else {
@@ -769,6 +783,7 @@ export default function EventPage({ params }) {
   const handleSignOut = () => {
     setJoined(false);
     setJoinedName("");
+    setMyDisplayName("");
     setParticipantId(null);
     setHasPassword(false);
     setMyAvailability([]);
@@ -875,7 +890,14 @@ export default function EventPage({ params }) {
   return (
     <Container>
       <PageHeader>
-        <Title>{event.name}</Title>
+        <Title>
+          {event.name}
+          {event.anonymous && (
+            <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: "var(--text-muted)", verticalAlign: "middle" }}>
+              🐾 익명
+            </span>
+          )}
+        </Title>
         <HeaderButtons>
           {adminToken && (
             <CopyButton onClick={handleCopyAdminLink}>
@@ -956,6 +978,11 @@ export default function EventPage({ params }) {
         {!joined ? (
           <>
             <Label>이름을 입력하여 참가하세요</Label>
+            {event.anonymous && (
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10, marginTop: -2 }}>
+                🐾 익명 모드 — 다른 참가자에게 이름 대신 동물 별칭으로 표시됩니다. 방장에게는 실명이 공개됩니다.
+              </p>
+            )}
             <form onSubmit={handleNameSubmit}>
               <NameInputRow>
                 <NameInput
@@ -972,6 +999,9 @@ export default function EventPage({ params }) {
                 </JoinButton>
               </NameInputRow>
             </form>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
+              비밀번호를 설정하지 않으면 같은 이름으로 누구든 참가할 수 있습니다.
+            </p>
           </>
         ) : (
           <>
@@ -980,7 +1010,7 @@ export default function EventPage({ params }) {
               {saving && <SaveStatus>저장 중...</SaveStatus>}
             </Label>
             <NameInputRow>
-              <JoinedName>{joinedName}</JoinedName>
+              <JoinedName>{myDisplayName || joinedName}</JoinedName>
               <LockButton
                 $locked={hasPassword}
                 onClick={hasPassword ? undefined : openSetPasswordModal}
@@ -1002,6 +1032,7 @@ export default function EventPage({ params }) {
               — {selectedParticipants.map((sp) => sp.name).join(", ")} 일정 보는 중
             </span>
           )}
+
         </Label>
         <ParticipantList>
           {participants.length === 0 ? (
@@ -1010,23 +1041,23 @@ export default function EventPage({ params }) {
             </span>
           ) : (
             participants.map((p, index) => {
-              const selIdx = selectedParticipants.findIndex((sp) => sp.name === p.name);
-              const activeColor = !hiddenNames.has(p.name) && selIdx !== -1
+              const selIdx = selectedParticipants.findIndex((sp) => sp._id === p._id);
+              const activeColor = !hiddenNames.has(p._id) && selIdx !== -1
                 ? PARTICIPANT_COLORS[selIdx % PARTICIPANT_COLORS.length]
                 : null;
               return (
                 <ParticipantTag
-                  key={p._id || p.name || index}
+                  key={p._id || index}
                   $activeColor={activeColor}
-                  $hidden={hiddenNames.has(p.name)}
-                  data-hidden={hiddenNames.has(p.name)}
-                  onClick={() => !hiddenNames.has(p.name) && toggleSelectedParticipant(p)}
+                  $hidden={hiddenNames.has(p._id)}
+                  data-hidden={hiddenNames.has(p._id)}
+                  onClick={() => !hiddenNames.has(p._id) && toggleSelectedParticipant(p)}
                 >
                   {p.name}
                   <HideToggle
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleHidden(p.name);
+                      toggleHidden(p._id);
                     }}
                   >
                     {hiddenNames.has(p.name) ? "+" : "−"}

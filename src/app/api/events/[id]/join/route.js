@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import bcrypt from "bcryptjs";
+import { getAlias, getDisplayName, MAX_ANONYMOUS_PARTICIPANTS } from "@/lib/animals";
 
 export async function POST(request, { params }) {
   try {
@@ -24,6 +25,13 @@ export async function POST(request, { params }) {
     const client = await clientPromise;
     const db = client.db("unj");
 
+    const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
+    if (!event) {
+      return NextResponse.json({ error: "이벤트를 찾을 수 없습니다" }, { status: 404 });
+    }
+
+    const isAnonymous = !!event.anonymous;
+
     // 해당 이벤트에서 같은 이름의 참가자 조회
     const existing = await db.collection("participants").findOne({
       eventId: new ObjectId(id),
@@ -32,6 +40,38 @@ export async function POST(request, { params }) {
 
     // 참가자가 없으면 새로 생성
     if (!existing) {
+      if (isAnonymous) {
+        const participantCount = await db.collection("participants").countDocuments({
+          eventId: new ObjectId(id),
+        });
+        if (participantCount >= MAX_ANONYMOUS_PARTICIPANTS) {
+          return NextResponse.json({ error: "최대 참가 인원에 도달했습니다" }, { status: 400 });
+        }
+
+        const aliasIndex = participantCount;
+        const newParticipant = {
+          eventId: new ObjectId(id),
+          name: name.trim(),
+          aliasIndex,
+          password: null,
+          availability: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const result = await db.collection("participants").insertOne(newParticipant);
+
+        return NextResponse.json({
+          status: "ok",
+          participantId: result.insertedId.toString(),
+          name: name.trim(),
+          displayName: getDisplayName(aliasIndex, name.trim()),
+          alias: getAlias(aliasIndex),
+          availability: [],
+          hasPassword: false,
+        });
+      }
+
       const newParticipant = {
         eventId: new ObjectId(id),
         name: name.trim(),
@@ -47,6 +87,7 @@ export async function POST(request, { params }) {
         status: "ok",
         participantId: result.insertedId.toString(),
         name: name.trim(),
+        displayName: name.trim(),
         availability: [],
         hasPassword: false,
       });
@@ -54,10 +95,16 @@ export async function POST(request, { params }) {
 
     // 참가자가 있고 비밀번호가 없으면 바로 접근 허용
     if (!existing.password) {
+      const displayName = isAnonymous
+        ? getDisplayName(existing.aliasIndex, existing.name)
+        : existing.name;
+
       return NextResponse.json({
         status: "ok",
         participantId: existing._id.toString(),
         name: existing.name,
+        displayName,
+        alias: isAnonymous ? getAlias(existing.aliasIndex) : null,
         availability: existing.availability || [],
         hasPassword: false,
       });
@@ -80,11 +127,16 @@ export async function POST(request, { params }) {
       );
     }
 
-    // 비밀번호 일치 → 접근 허용
+    const displayName = isAnonymous
+      ? getDisplayName(existing.aliasIndex, existing.name)
+      : existing.name;
+
     return NextResponse.json({
       status: "ok",
       participantId: existing._id.toString(),
       name: existing.name,
+      displayName,
+      alias: isAnonymous ? getAlias(existing.aliasIndex) : null,
       availability: existing.availability || [],
       hasPassword: true,
     });

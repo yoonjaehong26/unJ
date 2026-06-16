@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { getAlias, getDisplayName } from "@/lib/animals";
 
 // 참가자 목록 조회
 export async function GET(request, { params }) {
@@ -14,20 +15,47 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "잘못된 ID" }, { status: 400 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const adminToken = searchParams.get("adminToken");
+    const participantId = searchParams.get("participantId");
+
     const client = await clientPromise;
     const db = client.db("unj");
+
+    const event = await db.collection("events").findOne({ _id: new ObjectId(id) });
+    if (!event) {
+      return NextResponse.json({ error: "이벤트를 찾을 수 없습니다" }, { status: 404 });
+    }
+
+    const isAnonymous = !!event.anonymous;
+    const isAdmin = isAnonymous && adminToken && adminToken === event.adminToken;
 
     const participants = await db.collection("participants")
       .find({ eventId: new ObjectId(id) })
       .toArray();
 
     return NextResponse.json(
-      participants.map((p) => ({
-        _id: p._id.toString(),
-        name: p.name,
-        availability: p.availability,
-        hasPassword: !!p.password,
-      }))
+      participants.map((p) => {
+        if (!isAnonymous) {
+          return {
+            _id: p._id.toString(),
+            name: p.name,
+            availability: p.availability,
+            hasPassword: !!p.password,
+          };
+        }
+
+        const alias = getAlias(p.aliasIndex);
+        const isMe = participantId && p._id.toString() === participantId;
+        const showReal = isAdmin || isMe;
+
+        return {
+          _id: p._id.toString(),
+          name: showReal ? getDisplayName(p.aliasIndex, p.name) : alias,
+          availability: p.availability,
+          hasPassword: !!p.password,
+        };
+      })
     );
   } catch (error) {
     console.error("Participants fetch error:", error);
@@ -53,7 +81,6 @@ export async function POST(request, { params }) {
     const client = await clientPromise;
     const db = client.db("unj");
 
-    // 같은 이름이 있으면 업데이트, 없으면 생성
     const updateDoc = {
       $set: {
         availability: availability || [],

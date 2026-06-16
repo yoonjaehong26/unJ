@@ -30,6 +30,7 @@ export async function GET(request, { params }) {
       dates: event.dates,
       startTime: event.startTime,
       endTime: event.endTime,
+      anonymous: !!event.anonymous,
       createdAt: event.createdAt,
     });
   } catch (error) {

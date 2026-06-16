@@ -20,6 +20,25 @@ const Container = styled.div`
 
   @media (max-width: 768px) {
     padding: 12px;
+    overflow-y: auto;
+    max-height: 65vh;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 10px;
+      min-height: 44px;
+    }
+    &::-webkit-scrollbar-thumb:active {
+      background: rgba(255, 255, 255, 0.4);
+    }
   }
 `;
 
@@ -76,7 +95,6 @@ const Grid = styled.div`
   grid-template-columns: 50px repeat(${(props) => props.$cols}, minmax(40px, 1fr));
   gap: 2px;
   user-select: none;
-  touch-action: none;
   min-width: ${(props) => 50 + props.$cols * 40}px;
 
   @media (max-width: 768px) {
@@ -119,6 +137,13 @@ const TimeLabel = styled.div`
   align-items: flex-start;
   justify-content: flex-end;
   height: 48px;
+  touch-action: pan-y;
+  border-radius: 4px;
+  transition: background 0.1s;
+
+  &:active {
+    background: var(--bg-tertiary);
+  }
 
   @media (max-width: 768px) {
     font-size: 10px;
@@ -142,6 +167,7 @@ const HalfHourCell = styled.div`
     return "var(--bg-secondary)";
   }};
   cursor: pointer;
+  touch-action: none;
   transition: background 0.1s;
 
   @media (max-width: 768px) {
@@ -312,6 +338,8 @@ export default function AvailabilityGrid({
     if (!container) return;
 
     const handleTouchMove = (e) => {
+      if (!touchStartSlotRef.current) return;
+
       e.preventDefault();
 
       const touch = e.touches[0];

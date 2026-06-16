@@ -179,11 +179,53 @@ const EnterButton = styled.a`
 
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
+const ToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-top: 14px;
+  user-select: none;
+`;
+
+const ToggleSwitch = styled.div`
+  position: relative;
+  width: 38px;
+  height: 22px;
+  background: ${(props) => (props.$on ? "var(--accent)" : "var(--border-subtle)")};
+  border-radius: 11px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: ${(props) => (props.$on ? "19px" : "3px")};
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+`;
+
+const ToggleLabel = styled.span`
+  font-size: 13px;
+  color: var(--text-secondary);
+`;
+
+const ToggleDesc = styled.span`
+  font-size: 11px;
+  color: var(--text-muted);
+`;
+
 export default function CreateEventForm() {
   const [name, setName] = useState("");
   const [selectedWeek, setSelectedWeek] = useState(0);
   const [timeRange, setTimeRange] = useState({ startTime: 9, endTime: 18 });
   const [selectedDays, setSelectedDays] = useState([true, true, true, true, true, true, true]);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
@@ -217,6 +259,7 @@ export default function CreateEventForm() {
           dates: dates.map((d) => d.toISOString()),
           startTime: timeRange.startTime,
           endTime: timeRange.endTime,
+          anonymous,
         }),
       });
 
@@ -318,6 +361,15 @@ export default function CreateEventForm() {
           ))}
         </DayToggleRow>
       </Section>
+
+      <ToggleRow onClick={() => setAnonymous((v) => !v)}>
+        <ToggleSwitch $on={anonymous} />
+        <div>
+          <ToggleLabel>익명 모드</ToggleLabel>
+          {" "}
+          <ToggleDesc>참가자들끼리 서로 이름을 볼 수 없고 동물 별칭으로 표시됩니다</ToggleDesc>
+        </div>
+      </ToggleRow>
 
       <Button type="submit" disabled={!canSubmit || loading}>
         {loading ? "생성 중..." : "이벤트 만들기"}
