@@ -314,7 +314,6 @@ export default function AvailabilityGrid({
   startDragRef.current = startDrag;
 
   const handleTouchStart = (e, colKey, hour, minute) => {
-    e.preventDefault();
     touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     touchHasDraggedRef.current = false;
     touchStartSlotRef.current = { colKey, hour, minute };
