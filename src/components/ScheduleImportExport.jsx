@@ -66,11 +66,14 @@ const Modal = styled.div`
   padding: 20px;
   width: 380px;
   max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
 
   @media (max-width: 480px) {
     border-radius: 20px 20px 0 0;
     width: 100%;
     padding: 20px 16px 28px;
+    max-height: 85vh;
   }
 `;
 
@@ -138,12 +141,7 @@ const PreviewScaler = styled.div`
   margin-bottom: 14px;
   border-radius: 10px;
   overflow: hidden;
-  max-height: 210px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
 
-  /* AvailabilityGrid Container 의 border-radius 덮어쓰기 */
   > div {
     border-radius: 0;
   }
