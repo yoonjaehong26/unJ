@@ -78,7 +78,12 @@ const AdminPanelTitle = styled.div`
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
-  margin-bottom: 12px;
+  margin-bottom: ${(props) => (props.$open ? "12px" : "0")};
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
 `;
 
 const AdminRow = styled.div`
@@ -437,6 +442,38 @@ const ErrorText = styled.p`
   margin-bottom: 12px;
 `;
 
+// 모바일 그리드 토글
+const MobileGridToggle = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 16px;
+  }
+`;
+
+const ToggleTab = styled.button`
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid ${(props) => (props.$active ? "var(--accent)" : "transparent")};
+  background: transparent;
+  color: ${(props) => (props.$active ? "var(--accent)" : "var(--text-muted)")};
+  font-size: 14px;
+  font-weight: ${(props) => (props.$active ? "600" : "400")};
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+`;
+
+const MobileGrid = styled.div`
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    display: ${(props) => (props.$visible ? "block" : "none")};
+  }
+`;
+
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function getSelectedDaysFromDates(dates) {
@@ -495,6 +532,8 @@ export default function EventPage({ params }) {
   const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [hiddenNames, setHiddenNames] = useState(new Set());
+  const [activeGrid, setActiveGrid] = useState("availability");
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
   // 방장 관련
   const [adminToken, setAdminToken] = useState(null);
@@ -912,64 +951,76 @@ export default function EventPage({ params }) {
 
       {adminToken && adminSelectedDays && (
         <AdminPanel>
-          <AdminPanelTitle>방장 설정</AdminPanelTitle>
+          <AdminPanelTitle $open={adminPanelOpen} onClick={() => setAdminPanelOpen((v) => !v)}>
+            방장 설정
+            <span style={{
+              fontSize: 10,
+              display: "inline-block",
+              transform: adminPanelOpen ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s",
+            }}>▼</span>
+          </AdminPanelTitle>
 
-          <AdminRow>
-            <AdminLabel>시간 범위</AdminLabel>
-            <TimeSelect
-              value={adminStartTime}
-              onChange={(e) => setAdminStartTime(Number(e.target.value))}
-            >
-              {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
-              ))}
-            </TimeSelect>
-            <span style={{ color: "var(--text-muted)", fontSize: 14 }}>~</span>
-            <TimeSelect
-              value={adminEndTime}
-              onChange={(e) => setAdminEndTime(Number(e.target.value))}
-            >
-              {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
-                <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
-              ))}
-            </TimeSelect>
-          </AdminRow>
-
-          <AdminRow>
-            <AdminLabel>요일</AdminLabel>
-            <AdminDayToggleRow>
-              {DAY_LABELS.map((day, idx) => (
-                <AdminDayBtn
-                  key={idx}
-                  type="button"
-                  $selected={adminSelectedDays[idx]}
-                  onClick={() =>
-                    setAdminSelectedDays((prev) => {
-                      const next = [...prev];
-                      next[idx] = !next[idx];
-                      return next;
-                    })
-                  }
+          {adminPanelOpen && (
+            <>
+              <AdminRow>
+                <AdminLabel>시간 범위</AdminLabel>
+                <TimeSelect
+                  value={adminStartTime}
+                  onChange={(e) => setAdminStartTime(Number(e.target.value))}
                 >
-                  {day}
-                </AdminDayBtn>
-              ))}
-            </AdminDayToggleRow>
-          </AdminRow>
+                  {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                    <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
+                  ))}
+                </TimeSelect>
+                <span style={{ color: "var(--text-muted)", fontSize: 14 }}>~</span>
+                <TimeSelect
+                  value={adminEndTime}
+                  onChange={(e) => setAdminEndTime(Number(e.target.value))}
+                >
+                  {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
+                    <option key={h} value={h}>{`${h.toString().padStart(2, "0")}:00`}</option>
+                  ))}
+                </TimeSelect>
+              </AdminRow>
 
-          <AdminSaveRow>
-            <AdminSaveBtn onClick={handleAdminSave} disabled={adminSaving}>
-              {adminSaving ? "저장 중..." : "설정 저장"}
-            </AdminSaveBtn>
-            {adminSaveMsg && (
-              <AdminSaveMsg $error={adminSaveMsg.error}>{adminSaveMsg.text}</AdminSaveMsg>
-            )}
-          </AdminSaveRow>
+              <AdminRow>
+                <AdminLabel>요일</AdminLabel>
+                <AdminDayToggleRow>
+                  {DAY_LABELS.map((day, idx) => (
+                    <AdminDayBtn
+                      key={idx}
+                      type="button"
+                      $selected={adminSelectedDays[idx]}
+                      onClick={() =>
+                        setAdminSelectedDays((prev) => {
+                          const next = [...prev];
+                          next[idx] = !next[idx];
+                          return next;
+                        })
+                      }
+                    >
+                      {day}
+                    </AdminDayBtn>
+                  ))}
+                </AdminDayToggleRow>
+              </AdminRow>
 
-          {participants.length > 0 && (
-            <AdminNote>
-              ※ 참가자가 있는 상태에서 날짜를 변경하면 기존 일정 데이터가 맞지 않을 수 있습니다.
-            </AdminNote>
+              <AdminSaveRow>
+                <AdminSaveBtn onClick={handleAdminSave} disabled={adminSaving}>
+                  {adminSaving ? "저장 중..." : "설정 저장"}
+                </AdminSaveBtn>
+                {adminSaveMsg && (
+                  <AdminSaveMsg $error={adminSaveMsg.error}>{adminSaveMsg.text}</AdminSaveMsg>
+                )}
+              </AdminSaveRow>
+
+              {participants.length > 0 && (
+                <AdminNote>
+                  ※ 참가자가 있는 상태에서 날짜를 변경하면 기존 일정 데이터가 맞지 않을 수 있습니다.
+                </AdminNote>
+              )}
+            </>
           )}
         </AdminPanel>
       )}
@@ -1069,27 +1120,40 @@ export default function EventPage({ params }) {
         </ParticipantList>
       </Participants>
 
-      <GridsContainer>
-        <AvailabilityGrid
-          dates={event.dates}
-          startTime={event.startTime}
-          endTime={event.endTime}
-          availability={myAvailability}
-          onChange={handleAvailabilityChange}
-          readOnly={!joined}
-          onReadOnlyClick={handleReadOnlyGridClick}
-        />
+      <MobileGridToggle>
+        <ToggleTab $active={activeGrid === "availability"} onClick={() => setActiveGrid("availability")}>
+          내 일정
+        </ToggleTab>
+        <ToggleTab $active={activeGrid === "group"} onClick={() => setActiveGrid("group")}>
+          그룹 결과
+        </ToggleTab>
+      </MobileGridToggle>
 
-        <GroupResultGrid
-          dates={event.dates}
-          startTime={event.startTime}
-          endTime={event.endTime}
-          participants={visibleParticipants}
-          selectedParticipants={selectedParticipants.map((sp, idx) => ({
-            ...sp,
-            color: PARTICIPANT_COLORS[idx % PARTICIPANT_COLORS.length],
-          }))}
-        />
+      <GridsContainer>
+        <MobileGrid $visible={activeGrid === "availability"}>
+          <AvailabilityGrid
+            dates={event.dates}
+            startTime={event.startTime}
+            endTime={event.endTime}
+            availability={myAvailability}
+            onChange={handleAvailabilityChange}
+            readOnly={!joined}
+            onReadOnlyClick={handleReadOnlyGridClick}
+          />
+        </MobileGrid>
+
+        <MobileGrid $visible={activeGrid === "group"}>
+          <GroupResultGrid
+            dates={event.dates}
+            startTime={event.startTime}
+            endTime={event.endTime}
+            participants={visibleParticipants}
+            selectedParticipants={selectedParticipants.map((sp, idx) => ({
+              ...sp,
+              color: PARTICIPANT_COLORS[idx % PARTICIPANT_COLORS.length],
+            }))}
+          />
+        </MobileGrid>
       </GridsContainer>
 
       {joined && (

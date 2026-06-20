@@ -1,20 +1,10 @@
-/**
- * 내 일정 Import/Export 플로팅 버튼 + 모달
- * - 이벤트 페이지 참가 후 우하단에 표시
- * - Import: 내 일정(요일) → 이벤트 가용시간(날짜)
- * - Export: 이벤트 가용시간 → 내 일정(요일)으로 저장
- */
 "use client";
 
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import AvailabilityGrid from "./AvailabilityGrid";
-import {
-  loadMySchedule,
-  saveMySchedule,
-  importToEvent,
-  exportFromEvent,
-} from "@/lib/mySchedule";
+import { loadMySchedule, importToEvent, exportFromEvent } from "@/lib/mySchedule";
+import { getVisitedEventSchedules } from "@/lib/visitedEvents";
 
 const FAB = styled.button`
   position: fixed;
@@ -58,11 +48,10 @@ const Overlay = styled.div`
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   z-index: 200;
   padding: 20px 16px;
-  overflow-y: auto;
 
   @media (max-width: 480px) {
     align-items: flex-end;
@@ -74,323 +63,278 @@ const Modal = styled.div`
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
-  padding: 24px;
-  width: 460px;
+  padding: 20px;
+  width: 380px;
   max-width: 100%;
-  margin: auto 0;
 
   @media (max-width: 480px) {
     border-radius: 20px 20px 0 0;
     width: 100%;
-    padding: 24px 20px 32px;
+    padding: 20px 16px 28px;
   }
 `;
 
-const ModalTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 6px;
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
 `;
 
-const ModalDesc = styled.p`
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-  line-height: 1.5;
+const ModalTitle = styled.h3`
+  font-size: 15px;
+  font-weight: 600;
+`;
+
+const CloseButton = styled.button`
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
 `;
 
 const TabRow = styled.div`
   display: flex;
-  gap: 0;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 3px;
-  margin-bottom: 20px;
+  gap: 4px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 `;
 
 const Tab = styled.button`
-  flex: 1;
-  padding: 8px;
-  border: none;
-  border-radius: 6px;
-  background: ${(props) => (props.$active ? "var(--bg-card)" : "transparent")};
-  color: ${(props) => (props.$active ? "var(--text-primary)" : "var(--text-muted)")};
-  font-size: 13px;
-  font-weight: ${(props) => (props.$active ? "500" : "400")};
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 1px solid ${(p) => (p.$active ? "var(--accent)" : "var(--border-subtle)")};
+  border-radius: 20px;
+  background: ${(p) => (p.$active ? "rgba(76,175,80,0.12)" : "transparent")};
+  color: ${(p) => (p.$active ? "var(--accent)" : "var(--text-muted)")};
+  font-size: 12px;
+  font-weight: ${(p) => (p.$active ? "600" : "400")};
   cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: ${(props) => (props.$active ? "0 1px 4px rgba(0,0,0,0.1)" : "none")};
+  transition: all 0.12s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
 `;
 
-const InfoBox = styled.div`
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
+const PreviewScaler = styled.div`
+  zoom: 0.65;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 210px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+
+  /* AvailabilityGrid Container 의 border-radius 덮어쓰기 */
+  > div {
+    border-radius: 0;
+  }
 `;
 
 const EmptyBox = styled.div`
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 16px;
+  padding: 28px 16px;
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 16px;
+  line-height: 1.6;
 `;
 
-const RadioGroup = styled.div`
+const BottomRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-`;
-
-const RadioLabel = styled.label`
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid ${(props) => (props.$selected ? "var(--accent)" : "var(--border-subtle)")};
-  border-radius: 8px;
-  cursor: pointer;
-  background: ${(props) => (props.$selected ? "rgba(76, 175, 80, 0.06)" : "transparent")};
-  transition: border-color 0.15s;
-`;
-
-const RadioText = styled.div`
-  font-size: 13px;
-
-  strong {
-    display: block;
-    color: var(--text-primary);
-    margin-bottom: 2px;
-  }
-
-  span {
-    color: var(--text-muted);
-    font-size: 12px;
-  }
-`;
-
-const Buttons = styled.div`
-  display: flex;
-  gap: 8px;
   justify-content: flex-end;
+  gap: 8px;
 `;
 
 const CancelButton = styled.button`
-  padding: 10px 16px;
+  padding: 9px 14px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   background: none;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
 
-  &:hover {
-    border-color: var(--text-muted);
-  }
+  &:hover { border-color: var(--text-muted); }
 `;
 
 const ActionButton = styled.button`
-  padding: 10px 18px;
+  padding: 9px 16px;
   border: none;
   border-radius: 8px;
   background: var(--accent);
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s;
 
-  &:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-`;
-
-const PreviewWrapper = styled.div`
-  margin-bottom: 16px;
+  &:hover:not(:disabled) { opacity: 0.9; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 const SuccessMsg = styled.div`
   text-align: center;
-  padding: 12px;
+  padding: 24px 0 10px;
   font-size: 14px;
   color: var(--accent);
   font-weight: 500;
 `;
 
-export default function ScheduleImportExport({ event, myAvailability, onImport }) {
+export default function ScheduleImportExport({ event, eventId, myAvailability, onImport }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState("import"); // "import" | "export"
-  const [mergeMode, setMergeMode] = useState("merge");
   const [myAvail, setMyAvail] = useState([]);
-  const [exportDone, setExportDone] = useState(false);
-  const [importDone, setImportDone] = useState(false);
+  const [otherEvents, setOtherEvents] = useState([]);
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const { availability } = loadMySchedule();
-      setMyAvail(availability || []);
-      setExportDone(false);
-      setImportDone(false);
-    }
-  }, [open]);
+    if (!open) return;
+    const { availability } = loadMySchedule();
+    setMyAvail(availability || []);
+    setOtherEvents(getVisitedEventSchedules(eventId));
+    setSelectedTab(0);
+    setDone(false);
+  }, [open, eventId]);
 
-  const mySlotCount = myAvail.length;
+  // sources: 다른 방들 + 내 일정(있으면)
+  const sources = [
+    ...otherEvents.map((e) => ({ type: "event", label: e.eventName || e.eventId, item: e })),
+    ...(myAvail.length > 0 ? [{ type: "personal", label: "내 일정" }] : []),
+  ];
 
-  const handleImport = () => {
-    const newAvailability = importToEvent(
-      myAvail,
-      event.dates,
-      event.startTime,
-      event.endTime,
-      myAvailability,
-      mergeMode
-    );
+  const current = sources[selectedTab] ?? null;
+
+  const applyAndClose = (newAvailability) => {
     onImport(newAvailability);
-    setImportDone(true);
-    setTimeout(() => setOpen(false), 900);
+    setDone(true);
+    setTimeout(() => setOpen(false), 700);
   };
 
-  const handleExport = () => {
-    const exported = exportFromEvent(myAvailability, event.dates);
-    saveMySchedule(exported);
-    setMySlotCount(exported.length);
-    setExportDone(true);
+  const handleApply = () => {
+    if (!current) return;
+
+    if (current.type === "personal") {
+      const newAvailability = importToEvent(
+        myAvail,
+        event.dates,
+        event.startTime,
+        event.endTime,
+        myAvailability,
+        "replace"
+      );
+      applyAndClose(newAvailability);
+    } else {
+      const { item } = current;
+      const dayOfWeekBased = exportFromEvent(item.schedule.availability, item.schedule.dates);
+      const newAvailability = importToEvent(
+        dayOfWeekBased,
+        event.dates,
+        event.startTime,
+        event.endTime,
+        myAvailability,
+        "replace"
+      );
+      applyAndClose(newAvailability);
+    }
   };
 
+  const renderPreview = () => {
+    if (!current) return null;
+
+    if (current.type === "personal") {
+      return (
+        <AvailabilityGrid
+          mode="personal"
+          startTime={event.startTime}
+          endTime={event.endTime}
+          availability={myAvail}
+          readOnly
+          hideHeader
+        />
+      );
+    }
+
+    const { item } = current;
+    return (
+      <AvailabilityGrid
+        dates={item.schedule.dates}
+        startTime={item.schedule.startTime}
+        endTime={item.schedule.endTime}
+        availability={item.schedule.availability}
+        readOnly
+        hideHeader
+      />
+    );
+  };
 
   return (
     <>
-      <FAB onClick={() => setOpen(true)} title="내 일정 가져오기/저장">
+      <FAB onClick={() => setOpen(true)} title="내 일정 가져오기">
         📋
       </FAB>
 
       {open && (
         <Overlay onClick={() => setOpen(false)}>
           <Modal onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>내 일정</ModalTitle>
+            <ModalHeader>
+              <ModalTitle>일정 가져오기</ModalTitle>
+              <CloseButton onClick={() => setOpen(false)}>✕</CloseButton>
+            </ModalHeader>
 
-            <TabRow>
-              <Tab $active={tab === "import"} onClick={() => { setTab("import"); setImportDone(false); }}>
-                가져오기
-              </Tab>
-              <Tab $active={tab === "export"} onClick={() => { setTab("export"); setExportDone(false); }}>
-                저장하기
-              </Tab>
-            </TabRow>
-
-            {tab === "import" && (
+            {done ? (
+              <SuccessMsg>✓ 적용됐습니다!</SuccessMsg>
+            ) : sources.length === 0 ? (
               <>
-                <ModalDesc>
-                  홈페이지에 저장해 둔 내 일정을 이 이벤트에 가져옵니다.
-                  요일이 일치하는 시간대만 반영됩니다.
-                </ModalDesc>
-
-                {mySlotCount === 0 ? (
-                  <EmptyBox>
-                    저장된 내 일정이 없습니다.<br />
-                    홈페이지에서 먼저 내 일정을 등록해주세요.
-                  </EmptyBox>
-                ) : (
-                  <>
-                    <PreviewWrapper>
-                      <AvailabilityGrid
-                        mode="personal"
-                        startTime={event.startTime}
-                        endTime={event.endTime}
-                        availability={myAvail}
-                        readOnly
-                        gridTitle={`내 일정 미리보기 (${event.startTime}:00 ~ ${event.endTime}:00)`}
-                      />
-                    </PreviewWrapper>
-
-                    <RadioGroup style={{ marginTop: "4px" }}>
-                      <RadioLabel $selected={mergeMode === "merge"}>
-                        <input
-                          type="radio"
-                          name="mergeMode"
-                          value="merge"
-                          checked={mergeMode === "merge"}
-                          onChange={() => setMergeMode("merge")}
-                        />
-                        <RadioText>
-                          <strong>병합</strong>
-                          <span>기존 입력 내용은 유지하고, 내 일정을 추가합니다</span>
-                        </RadioText>
-                      </RadioLabel>
-                      <RadioLabel $selected={mergeMode === "replace"}>
-                        <input
-                          type="radio"
-                          name="mergeMode"
-                          value="replace"
-                          checked={mergeMode === "replace"}
-                          onChange={() => setMergeMode("replace")}
-                        />
-                        <RadioText>
-                          <strong>덮어쓰기</strong>
-                          <span>기존 입력 내용을 지우고, 내 일정으로 교체합니다</span>
-                        </RadioText>
-                      </RadioLabel>
-                    </RadioGroup>
-                  </>
-                )}
-
-                {importDone && <SuccessMsg>✓ 가져왔습니다!</SuccessMsg>}
-
-                <Buttons>
-                  <CancelButton onClick={() => setOpen(false)}>취소</CancelButton>
-                  <ActionButton
-                    onClick={handleImport}
-                    disabled={mySlotCount === 0 || importDone}
-                  >
-                    가져오기
-                  </ActionButton>
-                </Buttons>
-              </>
-            )}
-
-            {tab === "export" && (
-              <>
-                <ModalDesc>
-                  현재 입력한 가용시간을 내 일정으로 저장합니다.
-                  기존에 저장된 내 일정은 덮어써집니다.
-                </ModalDesc>
-
-                <InfoBox>
-                  💾 저장할 슬롯: <strong style={{ color: "var(--text-primary)" }}>{myAvailability.length}개</strong>
-                  {exportDone && mySlotCount > 0 && (
-                    <span style={{ marginLeft: 8, color: "var(--accent)" }}>→ 저장 완료</span>
-                  )}
-                </InfoBox>
-
-                {myAvailability.length === 0 && (
-                  <EmptyBox>
-                    아직 가용시간을 입력하지 않았습니다.
-                  </EmptyBox>
-                )}
-
-                {exportDone && <SuccessMsg>✓ 내 일정에 저장했습니다!</SuccessMsg>}
-
-                <Buttons>
+                <EmptyBox>
+                  저장된 일정이 없습니다.<br />
+                  홈페이지에서 내 일정을 등록하거나<br />
+                  다른 방에 먼저 참가해 보세요.
+                </EmptyBox>
+                <BottomRow>
                   <CancelButton onClick={() => setOpen(false)}>닫기</CancelButton>
-                  <ActionButton
-                    onClick={handleExport}
-                    disabled={myAvailability.length === 0 || exportDone}
-                  >
-                    내 일정에 저장
-                  </ActionButton>
-                </Buttons>
+                </BottomRow>
+              </>
+            ) : (
+              <>
+                {sources.length > 1 && (
+                  <TabRow>
+                    {sources.map((s, i) => (
+                      <Tab
+                        key={i}
+                        $active={selectedTab === i}
+                        onClick={() => setSelectedTab(i)}
+                      >
+                        {s.label}
+                      </Tab>
+                    ))}
+                  </TabRow>
+                )}
+
+                <PreviewScaler>
+                  {renderPreview()}
+                </PreviewScaler>
+
+                <BottomRow>
+                  <CancelButton onClick={() => setOpen(false)}>취소</CancelButton>
+                  <ActionButton onClick={handleApply}>가져오기</ActionButton>
+                </BottomRow>
               </>
             )}
           </Modal>

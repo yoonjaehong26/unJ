@@ -209,6 +209,7 @@ export default function AvailabilityGrid({
   onReadOnlyClick,
   mode = "event", // "event" | "personal"
   gridTitle,
+  hideHeader = false,
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState(null);
@@ -387,7 +388,7 @@ export default function AvailabilityGrid({
       onMouseLeave={handleMouseUp}
       onTouchEnd={handleTouchEnd}
     >
-      <Header>
+      {!hideHeader && <Header>
         <GridTitle>{title}</GridTitle>
         {!readOnly && (
           <ModeToggle>
@@ -414,7 +415,7 @@ export default function AvailabilityGrid({
             </ModeButton>
           </ModeToggle>
         )}
-      </Header>
+      </Header>}
 
       <Grid $cols={numCols}>
         <HeaderCell />

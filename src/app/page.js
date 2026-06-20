@@ -1,5 +1,6 @@
 import CreateEventForm from "@/components/CreateEventForm";
 import MyScheduleSection from "@/components/MyScheduleSection";
+import VisitedEventsSection from "@/components/VisitedEventsSection";
 
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
 
       <CreateEventForm />
       <MyScheduleSection />
+      <VisitedEventsSection />
     </main>
   );
 }
