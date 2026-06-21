@@ -1,154 +1,150 @@
 # UnJ - 일정 조율 웹 애플리케이션
 
-When2Meet 스타일의 그룹 일정 조율 서비스입니다. 여러 참여자가 가능한 시간대를 표시하면, 모두에게 맞는 시간을 한눈에 확인할 수 있습니다.
+When2Meet 스타일의 그룹 일정 조율 서비스입니다. 여러 참가자가 가능한 시간대를 표시하면, 모두에게 맞는 시간을 한눈에 확인할 수 있습니다. 로그인 없이 이름만으로 참가하며, **방장 권한**, **익명 모드**, **개인 일정 저장/재사용** 기능을 지원합니다.
+
+배포 주소: [www.unj.kr](https://www.unj.kr)
 
 ---
 
-## 핵심 기능 상세
+## 핵심 기능 한눈에 보기
 
-### 이벤트 생성
+| 기능 | 설명 |
+|------|------|
+| 이벤트 생성 | 이름·주·요일·시간 범위 선택, 익명 모드 토글 |
+| 방장(Admin) | 생성자에게 발급되는 `adminToken`으로 시간·요일 사후 수정 / 참가자 삭제 |
+| 익명 모드 | 참가자끼리 이름 대신 동물 별칭으로 표시 (방장·본인만 실명 확인) |
+| 가용시간 입력 | 30분 단위 드래그 그리드 (가능 / 조정가능 2단계) |
+| 그룹 결과 | 전체 참가자 가용시간 히트맵 + 연속시간·최소인원 필터 |
+| 참가자 인증 | 이름 기반 참가 + 선택적 비밀번호(bcrypt) 보호 |
+| 내 일정 | 요일별 개인 가용시간을 localStorage에 저장 → 어느 방에서나 가져오기 |
+| 일정 가져오기 | 다른 참가한 방 / 내 일정에서 현재 방으로 가용시간 복사 |
+| 최근 참가한 방 | 홈에서 최근 방·방장 링크 빠르게 재접근 |
+| 다크/라이트 | 헤더 토글, `data-theme` + localStorage |
+| SEO | OpenGraph 이미지, sitemap, robots, 메타데이터 |
+
+---
+
+## 기능 상세
+
+### 1. 이벤트 생성 (`CreateEventForm`)
 
 | 항목 | 설명 |
 |------|------|
 | 이벤트 이름 | 자유 텍스트 입력 |
-| 주 선택 | 이번 주 / 다음 주 / 다다음 주 탭 선택 → 월~일 7일 날짜 자동 계산 |
-| 시간 범위 | 시작·종료 시간 개별 드롭다운 선택 (기본 09:00~18:00) |
-| 생성 | MongoDB에 이벤트 저장 후 고유 ID URL로 이동 |
+| 주 선택 | 이번 주 / 다음 주 / 다다음 주 탭 (`WeekSelector`) |
+| 요일 선택 | 월~일 중 원하는 요일만 토글 (선택한 요일의 날짜만 생성) |
+| 시간 범위 | 시작·종료 시간 드롭다운 (`TimeRangePicker`, 기본 09:00~18:00) |
+| 익명 모드 | 토글 ON 시 참가자에게 동물 별칭 표시 |
+| 생성 결과 | MongoDB 저장 후 **방장 링크**와 **공유 링크** 두 개를 발급 |
+
+생성 직후 두 종류의 링크가 표시됩니다.
+
+- **방장 링크** (`/{eventId}?admin={adminToken}`) — 시간·요일 수정 권한. 생성자만 보관.
+- **공유 링크** (`/{eventId}`) — 참가자에게 전달.
 
 ---
 
-### 가용시간 그리드 (`AvailabilityGrid`)
+### 2. 방장(Admin) 시스템
 
-30분 단위, 7일(월~일) 구성의 편집 가능한 개인 가용시간 입력 그리드입니다.
+이벤트 생성 시 `adminToken`(UUID)이 발급되며, URL 쿼리 `?admin={token}`으로 방장 권한이 활성화됩니다.
 
-**슬롯 구조**
-- 각 시간 행은 `:00`(정시)와 `:30`(30분) 두 셀로 구성
-- 정시 셀: 위쪽 모서리 둥글게, 30분 셀: 아래쪽 모서리 둥글게
+**방장 전용 기능**
 
-**상태 표현**
+- **이벤트 설정 수정**: 시간 범위, 표시 요일 변경 (`PATCH /api/events/[id]`, 서버에서 `adminToken` 검증)
+- **참가자 삭제**: `DELETE /api/events/[id]/participants/[participantId]` (방장 토큰 필요)
+- **익명 모드에서 실명 확인**: 참가자 목록 조회 시 `adminToken`을 넘기면 실명이 노출됨
 
-| 상태 | 색상 | CSS 값 |
-|------|------|--------|
-| 미선택 | 회색 | `var(--bg-secondary)` |
-| 가능 | 초록 | `var(--accent)` = `#4CAF50` |
-| 조정가능 | 주황 | `#F5A623` |
-
-**드래그 인터랙션 알고리즘**
-1. `mousedown` / `touchstart`: 드래그 시작, 현재 슬롯 상태에 따라 `select` / `deselect` 모드 결정
-2. `mouseenter` / `touchmove`: 시작 슬롯과 현재 슬롯의 인덱스 min/max 계산 → 범위 내 전체 슬롯 일괄 적용
-3. `mouseup` / `touchend` / `mouseleave`: 드래그 종료
-4. 열(dateIdx) 고정: 시작한 날짜 열 외의 슬롯은 무시
-
-**저장 흐름**
-```
-슬롯 변경 → onChange 호출 → 500ms 디바운스
-                                    ↓
-                         POST /api/events/[id]/participants
-                                    ↓
-                         participants state 갱신 (그룹 결과 즉시 반영)
-
-언마운트 시 → pendingRef에 미저장 데이터 있으면 → navigator.sendBeacon 전송
-```
+> ⚠️ 참가자가 있는 상태에서 요일/날짜를 바꾸면 기존 가용시간 데이터의 날짜 인덱스가 어긋날 수 있어 경고 문구가 표시됩니다.
 
 ---
 
-### 그룹 결과 그리드 (`GroupResultGrid`)
+### 3. 익명 모드
 
-전체 참여자의 가용시간을 집계하여 히트맵으로 보여주는 읽기 전용 그리드입니다.
+이벤트의 `anonymous: true`일 때 동작합니다.
 
-**색상 계산 로직**
+- 각 참가자는 가입 순서대로 `aliasIndex`를 부여받아 **동물 이모지 + 이름** 별칭으로 표시됩니다 (`src/lib/animals.js`, 예: `🦊여우`).
+- 다른 참가자에게는 별칭만, **방장과 본인에게는 `🦊여우(홍길동)`** 형태로 실명이 함께 노출됩니다.
+- 별칭 풀이 39개(`ANIMALS.length`)이므로 익명 방의 최대 참가 인원은 39명(`MAX_ANONYMOUS_PARTICIPANTS`)입니다.
 
-```javascript
-// available만 있을 때
-opacity = 0.2 + (available / total) * 0.8  // 연한~진한 초록
+---
 
-// maybe만 있을 때
-opacity = 0.3 + (maybe / total) * 0.7      // 연한~진한 주황
+### 4. 가용시간 그리드 (`AvailabilityGrid`)
 
-// 둘 다 있을 때 → 좌우 50% 분할 그라데이션
-left 50%: rgba(76, 175, 80, 0.3 + greenIntensity * 0.7)
-right 50%: rgba(245, 166, 35, 0.3 + yellowIntensity * 0.7)
+30분 단위의 편집 가능한 가용시간 입력 그리드. `mode` 프롭으로 두 가지 용도로 재사용됩니다.
+
+| `mode` | 컬럼 기준 필드 | 사용처 |
+|--------|---------------|--------|
+| `"event"` | `dateIdx` (이벤트 날짜 인덱스) | 이벤트 페이지 "내 가용시간" |
+| `"personal"` | `dayOfWeek` (요일 0=월~6=일) | 홈 "내 일정", 일정 가져오기 미리보기 |
+
+**입력 모드** — 그리드 상단 토글로 선택
+
+| 모드 | 색상 | 의미 |
+|------|------|------|
+| 🟢 가능 | 초록 `#4CAF50` | 확실히 가능한 시간 |
+| 🟡 조정가능 | 주황 `#F5A623` | 조정 시 가능한 시간 |
+
+**드래그 인터랙션**
+1. `mousedown`/`touchstart`: 시작 슬롯 상태에 따라 select/deselect 모드 결정
+2. `mouseenter`/`touchmove`: 시작~현재 슬롯 인덱스의 min~max 범위 일괄 적용
+3. 열(컬럼) 고정: 드래그 시작한 컬럼 외의 슬롯은 무시
+4. 탭과 드래그 구분(`touchHasDraggedRef`)으로 모바일 단일 토글/드래그 분리
+5. `readOnly`일 때 클릭하면 `onReadOnlyClick` 호출 (참가 전 이름 입력 유도 등)
+
+**저장 흐름 (이벤트 페이지)**
 ```
-
-**연속 시간 하이라이트 알고리즘**
-
-필터 조건(연속 슬롯 수 N, 최소 인원 M)을 만족하는 블록을 감지:
-
-```
-현재 슬롯 idx에 대해:
-  startIdx를 max(0, idx - N + 1) ~ idx 범위에서 순회
-    startIdx부터 N개 슬롯이 모두 M명 이상 가능한지 확인
-      → true: 현재 슬롯은 하이라이트 대상
-```
-
-- **초록 테두리**: "가능"(`available`) 인원만으로 조건 충족
-- **노란 테두리**: "가능 + 조정가능" 합산으로 조건 충족
-- 블록 시작부 → `borderTop` 둥글게, 블록 끝부 → `borderBottom` 둥글게, 중간부 → 양쪽 직선
-- 테두리는 `inset box-shadow`로 구현 (레이아웃 영향 없음)
-
-**참여자 하이라이트 모드**
-
-참여자 태그 클릭 시:
-- 해당 참여자가 가능한 슬롯: 색상 아웃라인(초록/주황) 강조
-- 해당 참여자가 없는 슬롯: `opacity: 0.15` 처리
-- 참여자 태그 재클릭 시 하이라이트 해제
-
-**툴팁**
-
-슬롯 hover 시 `fixed` 포지션 툴팁 표시:
-```
-14:00
-🟢 가능 (3): 홍길동, 김영희, 이철수
-🟡 조정가능 (1): 박민준
+슬롯 변경 → onChange → 500ms 디바운스 → POST /api/events/[id]/participants
+                                          → participants state 즉시 갱신
+언마운트 시 미저장분 → navigator.sendBeacon 으로 전송
 ```
 
 ---
 
-### 참여자 인증 시스템
+### 5. 그룹 결과 그리드 (`GroupResultGrid`)
 
-계정 없이 이름만으로 참여하되, 선택적 비밀번호로 이름 보호가 가능합니다.
+전체 참가자의 가용시간을 집계한 읽기 전용 히트맵.
 
-**참여 흐름**
-
-```
-이름 입력 → POST /api/events/[id]/join
-              ↓
-    DB에서 해당 이름 검색
-              ↓
-  ┌──────────────────────────────┐
-  │ 없음 → 신규 등록 → 참여 완료  │
-  │ 있음 + 비번 없음 → 참여 완료  │
-  │ 있음 + 비번 있음 → 비번 요청  │
-  │   └ 검증 성공 → 참여 완료    │
-  │   └ 검증 실패 → 에러 표시   │
-  └──────────────────────────────┘
-```
-
-**세션 저장 구조**
-
-```javascript
-// localStorage 키: `unj-participant-{eventId}`
-// 저장값:
-{ name: "홍길동" }
-```
-
-페이지 로드 시 자동으로 읽어 해당 이름으로 join API 재호출 → 비밀번호 없이 복원
-
-**비밀번호 보안**
-- bcryptjs `saltRounds: 12`로 해싱
-- DB에는 평문 비밀번호 저장 안 함
-- 검증: `bcrypt.compare(input, hash)`
+- **색상 강도**: `opacity = 0.2 + (해당 인원 / 전체 인원) × 0.8`
+- 가능/조정가능 혼재 슬롯은 좌(초록)·우(주황) 분할 그라데이션
+- **연속 시간 필터**: 연속 N슬롯 × 최소 M명 조건을 만족하는 블록에 `inset box-shadow` 테두리 (초록=가능만으로 충족 / 노랑=가능+조정가능 합산 충족)
+- **최소 인원 필터**: N명 이상 가능한 슬롯만 강조
+- **참가자 하이라이트**: 참가자 태그를 클릭하면 해당 참가자 슬롯을 컬러 아웃라인으로 강조, 나머지는 흐리게. **여러 명을 동시에** 선택 가능하며 각자 다른 색(`PARTICIPANT_COLORS`)이 배정됨
+- **툴팁**: 슬롯 hover 시 시간대별 참가자 이름을 가능/조정가능으로 구분 표시
 
 ---
 
-### 시간 범위 필터
+### 6. 참가자 인증
 
-이벤트 페이지 상단의 시간 범위 선택으로 그리드 표시 범위를 실시간 조정합니다.
+- 이름만으로 참가. 같은 이름 재입력 시 기존 데이터를 불러옴.
+- 선택적 **비밀번호**로 이름 보호 (bcryptjs `saltRounds: 12`, 평문 미저장)
+  - 비밀번호 설정된 이름으로 접속 → 비밀번호 입력 모달
+  - 검증 성공 시에만 편집 가능
+- `localStorage` 키 `unj-participant-{eventId}`에 `{ name }` 저장 → 재방문 시 자동 복원(비밀번호 없이)
 
-- 이벤트 생성 시 설정된 범위가 기본값
-- `viewStartTime`, `viewEndTime` state로 관리
-- 변경 즉시 양쪽 그리드(개인/그룹) 모두에 반영
-- DB 데이터는 변경되지 않음 (UI 뷰만 조정)
+---
+
+### 7. 내 일정 & 일정 가져오기
+
+방마다 매번 시간을 다시 칠하지 않도록, 개인 가용시간을 재사용하는 기능입니다.
+
+- **내 일정** (`MyScheduleSection`, 홈): 요일 기반(`dayOfWeek`) 가용시간을 `localStorage`(`unj-my-schedule`)에 저장
+- **일정 가져오기** (`ScheduleImportExport`, 이벤트 페이지 FAB 📋):
+  - 소스 선택 — "내 일정" 또는 "최근 참가한 다른 방"
+  - 미리보기 후 현재 방의 가용시간으로 변환·적용
+  - 변환 로직(`src/lib/mySchedule.js`)이 `dayOfWeek` ↔ `dateIdx`를 상호 매핑
+
+---
+
+### 8. 최근 참가한 방 (`VisitedEventsSection`)
+
+홈 화면에서 최근 참가/생성한 방 목록(`unj-visited-events`, 최대 3개)과 공유·방장 링크를 빠르게 다시 열 수 있습니다.
+
+---
+
+### 9. 테마 & SEO
+
+- **테마**: `Header`의 토글로 다크/라이트 전환, `data-theme` 속성 + `localStorage`, 최초엔 OS 설정(`prefers-color-scheme`) 따름
+- **SEO**: `layout.js` 메타데이터(OpenGraph/Twitter), 동적 OG 이미지(`opengraph-image.js`), `sitemap.js`, `robots.js` (`/api/` 차단)
 
 ---
 
@@ -158,11 +154,10 @@ right 50%: rgba(245, 166, 35, 0.3 + yellowIntensity * 0.7)
 |------|------|
 | 프레임워크 | Next.js 15.1.6 (App Router) |
 | UI | React 19.0.0 |
-| 스타일링 | styled-components 6.1.14 |
-| 데이터베이스 | MongoDB (MongoDB Atlas) |
-| DB 드라이버 | mongodb 6.12.0 |
+| 스타일링 | styled-components 6.1.14 (SSR 레지스트리) + CSS 변수 |
+| 데이터베이스 | MongoDB 6.12.0 (Atlas) |
 | 인증/해싱 | bcryptjs 3.0.3 |
-| 빌드 도구 | Turbopack |
+| 빌드 | Turbopack (dev) |
 
 ---
 
@@ -171,88 +166,96 @@ right 50%: rgba(245, 166, 35, 0.3 + yellowIntensity * 0.7)
 ```
 src/
 ├── app/
-│   ├── layout.js                          # 루트 레이아웃 (StyledComponents SSR 레지스트리)
-│   ├── page.js                            # 홈 - 이벤트 생성 페이지
-│   ├── globals.css                        # 전역 CSS
-│   ├── [eventId]/
-│   │   └── page.js                        # 이벤트 상세 페이지
-│   └── api/
-│       └── events/
-│           ├── route.js                   # POST: 이벤트 생성
-│           └── [id]/
-│               ├── route.js               # GET: 이벤트 조회
-│               ├── join/
-│               │   └── route.js           # POST: 이벤트 참여 (비밀번호 검증)
-│               └── participants/
-│                   ├── route.js           # GET: 참여자 목록 / POST: 가용시간 업데이트
-│                   └── [participantId]/
-│                       └── password/
-│                           └── route.js   # POST: 비밀번호 설정
+│   ├── layout.js                       # 루트 레이아웃, 메타데이터, Header, SSR 레지스트리
+│   ├── page.js                         # 홈 (CreateEventForm + MyScheduleSection + VisitedEventsSection)
+│   ├── globals.css
+│   ├── opengraph-image.js              # 동적 OG 이미지
+│   ├── sitemap.js / robots.js          # SEO
+│   ├── [eventId]/page.js               # 이벤트 상세 (참가/그리드/방장 패널/모달)
+│   └── api/events/
+│       ├── route.js                    # POST 생성 (adminToken 발급)
+│       └── [id]/
+│           ├── route.js                # GET 조회 / PATCH 방장 수정
+│           ├── join/route.js           # POST 참가 (비번 검증, 익명 별칭 부여)
+│           └── participants/
+│               ├── route.js            # GET 목록(익명 별칭 처리) / POST 가용시간 upsert
+│               └── [participantId]/
+│                   ├── route.js        # DELETE 참가자 삭제 (방장)
+│                   └── password/route.js # POST 비밀번호 설정
 ├── components/
-│   ├── AvailabilityGrid.jsx               # 개인 가용시간 그리드 (편집 가능)
-│   ├── GroupResultGrid.jsx                # 그룹 결과 히트맵 (읽기 전용)
-│   ├── WeekSelector.jsx                   # 주 단위 탭 선택
-│   ├── TimeRangePicker.jsx                # 시간 범위 선택 드롭다운
-│   ├── DateSelector.jsx                   # 달력 날짜 선택기
-│   └── Header.jsx                         # 상단 네비게이션 헤더
+│   ├── CreateEventForm.jsx             # 이벤트 생성 폼
+│   ├── AvailabilityGrid.jsx           # 가용시간 그리드 (event/personal 모드)
+│   ├── GroupResultGrid.jsx           # 그룹 결과 히트맵
+│   ├── ScheduleImportExport.jsx       # 일정 가져오기 모달(FAB)
+│   ├── MyScheduleSection.jsx          # 홈 - 내 일정
+│   ├── VisitedEventsSection.jsx       # 홈 - 최근 참가한 방
+│   ├── WeekSelector.jsx               # 주 선택 + getWeekDates 유틸
+│   ├── TimeRangePicker.jsx            # 시간 범위 선택
+│   ├── DateSelector.jsx               # 날짜 선택기
+│   └── Header.jsx                     # 헤더 + 테마 토글
 ├── lib/
-│   ├── mongodb.js                         # MongoDB 연결 싱글턴
-│   └── registry.js                        # StyledComponents SSR 레지스트리
+│   ├── mongodb.js                     # MongoDB 연결 싱글턴
+│   ├── animals.js                     # 익명 모드 동물 별칭
+│   ├── mySchedule.js                  # 내 일정 localStorage + dayOfWeek↔dateIdx 변환
+│   ├── visitedEvents.js               # 방문 방/방별 일정 localStorage
+│   └── registry.js                    # styled-components SSR 레지스트리
 └── styles/
-    └── GlobalStyles.js                    # 전역 스타일 (라이트/다크 모드)
+    └── GlobalStyles.js                # CSS 변수 (다크/라이트)
 ```
 
 ---
 
 ## API 엔드포인트
 
-### 이벤트
-
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| `POST` | `/api/events` | 새 이벤트 생성 |
-| `GET` | `/api/events/[id]` | 이벤트 상세 조회 |
-
-### 참여자
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| `POST` | `/api/events/[id]/join` | 이벤트 참여 (신규/기존 참여자 처리, 비밀번호 검증) |
-| `GET` | `/api/events/[id]/participants` | 참여자 목록 조회 |
-| `POST` | `/api/events/[id]/participants` | 가용시간 업데이트 (upsert) |
-| `POST` | `/api/events/[id]/participants/[participantId]/password` | 참여자 비밀번호 설정 |
+| `POST` | `/api/events` | 이벤트 생성 → `{ eventId, adminToken }` |
+| `GET` | `/api/events/[id]` | 이벤트 조회 (`anonymous` 포함) |
+| `PATCH` | `/api/events/[id]` | 방장: 시간/요일 수정 (`adminToken` 검증) |
+| `POST` | `/api/events/[id]/join` | 참가 (비밀번호 검증, 익명 별칭 부여) |
+| `GET` | `/api/events/[id]/participants` | 참가자 목록 (`adminToken`/`participantId`로 실명 노출 제어) |
+| `POST` | `/api/events/[id]/participants` | 가용시간 upsert |
+| `DELETE` | `/api/events/[id]/participants/[participantId]` | 방장: 참가자 삭제 |
+| `POST` | `/api/events/[id]/participants/[participantId]/password` | 비밀번호 설정 |
 
 ---
 
 ## 데이터 모델
 
-### Event (이벤트)
+### Event
 ```javascript
 {
   _id: ObjectId,
-  name: String,              // 이벤트 이름
-  dates: [Date],             // 선택된 날짜 배열
-  startTime: Number,         // 시작 시간 (0-24)
-  endTime: Number,           // 종료 시간 (0-24)
+  name: String,
+  dates: [Date],          // 선택된 요일의 날짜 배열 (최대 7)
+  startTime: Number,      // 0-23
+  endTime: Number,        // 1-24
+  adminToken: String,     // UUID, 방장 권한
+  anonymous: Boolean,     // 익명 모드 여부
   createdAt: Date
 }
 ```
 
-### Participant (참여자)
+### Participant
 ```javascript
 {
   _id: ObjectId,
-  eventId: String,           // 이벤트 ID
-  name: String,              // 참여자 이름
-  password: String | null,   // bcrypt 해시된 비밀번호 (선택)
-  availability: [{           // 가용 시간 슬롯 배열
-    dateIdx: Number,         // 날짜 인덱스 (0-6)
-    hour: Number,            // 시간 (0-23)
-    minute: Number,          // 분 (0 또는 30)
-    status: String           // "available" | "maybe"
-  }]
+  eventId: ObjectId,      // 이벤트 참조
+  name: String,           // 실명
+  aliasIndex: Number,     // 익명 모드 별칭 인덱스 (익명 방에서만)
+  password: String|null,  // bcrypt 해시 (선택)
+  availability: [{
+    dateIdx: Number,      // 날짜 인덱스 (0-6)
+    hour: Number,         // 0-23
+    minute: Number,       // 0 | 30
+    status: String        // "available" | "maybe"
+  }],
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
+
+> 내 일정(localStorage)의 슬롯은 `dateIdx` 대신 `dayOfWeek`(0=월~6=일)를 사용합니다.
 
 ---
 
@@ -262,209 +265,38 @@ src/
 - Node.js 18 이상
 - MongoDB Atlas 계정 또는 로컬 MongoDB
 
-### 설치
-
+### 설치 & 환경 변수
 ```bash
-# 의존성 설치
 npm install
 ```
 
-### 환경 변수 설정
-
-프로젝트 루트에 `.env.local` 파일을 생성합니다.
-
+프로젝트 루트에 `.env.local`:
 ```env
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
 ```
 
 ### 실행
-
 ```bash
-# 개발 서버 (Turbopack)
-npm run dev
-
-# 프로덕션 빌드
-npm run build
-
-# 프로덕션 실행
-npm run start
+npm run dev      # 개발 서버 (Turbopack, http://localhost:3000)
+npm run build    # 프로덕션 빌드
+npm run start    # 프로덕션 실행
+npm run lint     # ESLint
 ```
 
-개발 서버는 기본적으로 `http://localhost:3000`에서 실행됩니다.
+---
+
+## 실시간 동작 / 성능
+
+- **폴링**: 5초마다 참가자 목록 갱신 (내 가용시간은 로컬 state 우선, 폴링이 덮어쓰지 않음)
+- **디바운스 저장**: 가용시간 변경 시 500ms
+- **sendBeacon**: 페이지 이탈 시 미저장 데이터 보장
+- **터치 최적화**: 그리드 `touch-action: none`, 탭/드래그 구분
+- **클립보드 폴백**: `navigator.clipboard` 미지원 시 `textarea + execCommand`
 
 ---
 
-## 사용자 플로우
+## 반응형
 
-### 1단계: 이벤트 생성 (`/`)
-
-주최자가 홈 화면에서 이벤트를 만듭니다.
-
-1. **이벤트 이름** 입력 (예: "프로젝트 미팅")
-2. **시간 범위** 설정 - 시작 시간과 종료 시간을 드롭다운으로 선택 (기본값: 9:00 ~ 18:00)
-3. **주 선택** - 이번 주 / 다음 주 / 다다음 주 중 탭으로 선택
-4. "이벤트 만들기" 버튼 클릭 → MongoDB에 이벤트 저장 후 해당 이벤트 페이지(`/[eventId]`)로 자동 이동
-
-> 이벤트 이름과 주가 모두 선택되어야 버튼이 활성화됩니다.
-
----
-
-### 2단계: 링크 공유
-
-이벤트 페이지 우측 상단의 **"링크 복사"** 버튼으로 현재 URL을 클립보드에 복사합니다.
-
-- `navigator.clipboard.writeText` 사용
-- 미지원 브라우저는 `textarea + execCommand('copy')` 방식으로 폴백
-- 복사 후 2초간 버튼 텍스트가 "✓ 복사됨"으로 변경됨
-
----
-
-### 3단계: 이벤트 참여
-
-URL을 받은 참여자가 이벤트 페이지에 접속합니다.
-
-#### 신규 참여자
-1. 이름 입력 필드에 이름 작성 → "참가" 버튼 클릭
-2. API(`POST /api/events/[id]/join`)로 이름 전송
-3. 해당 이름이 DB에 없으면 새 참여자로 등록 → 가용시간 그리드 편집 가능 상태로 전환
-4. `localStorage`에 `unj-participant-{eventId}` 키로 이름 저장 (재방문 시 자동 복원)
-
-#### 기존 참여자 (비밀번호 없음)
-- 같은 이름 입력 시 기존 가용시간 데이터를 불러와 바로 편집 가능
-
-#### 기존 참여자 (비밀번호 있음)
-- 비밀번호가 설정된 이름으로 접속하면 **비밀번호 입력 모달** 자동 표시
-- 올바른 비밀번호 입력 시에만 가용시간 편집 가능
-
-#### 재방문 (같은 브라우저)
-- 페이지 로드 시 `localStorage` 자동 확인
-- 저장된 이름이 있으면 비밀번호 없이 자동으로 재참여 처리
-
----
-
-### 4단계: 가용시간 입력 (내 가용시간 그리드)
-
-왼쪽 그리드에서 본인의 가능한 시간을 선택합니다.
-
-#### 입력 모드 선택
-그리드 상단 토글로 두 가지 상태 중 하나를 선택:
-
-| 모드 | 색상 | 의미 |
-|------|------|------|
-| 🟢 가능 | 초록 (`#4CAF50`) | 확실히 가능한 시간 |
-| 🟡 조정가능 | 주황 (`#F5A623`) | 시간 조정 시 가능한 시간 |
-
-#### 드래그 선택 방식
-- **클릭**: 단일 슬롯 토글 (이미 선택된 모드면 해제, 아니면 선택)
-- **드래그**: 마우스 버튼을 누른 채 위아래로 드래그하면 범위 전체 선택/해제
-  - 드래그 시작 슬롯의 현재 상태에 따라 select/deselect 모드 자동 결정
-  - **컬럼 고정**: 드래그는 동일한 날짜(열) 내에서만 가능, 날짜 간 교차 불가
-  - 시작 슬롯과 현재 슬롯 사이의 최솟값~최댓값 인덱스 범위 전체 적용
-- **터치**: 모바일에서 손가락 드래그로 동일하게 동작
-  - `touchstart` → `touchmove` (non-passive 리스너) → `touchend`
-  - `touchmove` 중 `document.elementFromPoint()`로 현재 슬롯 감지
-
-#### 자동 저장
-- 슬롯 변경 시 즉시 `myAvailability` state 업데이트
-- 500ms 디바운스 타이머 후 `POST /api/events/[id]/participants` API 호출
-- 페이지 이탈(언마운트) 시 미저장 데이터가 있으면 `navigator.sendBeacon`으로 강제 전송
-
----
-
-### 5단계: 그룹 결과 확인 (그룹 결과 그리드)
-
-오른쪽 그리드에서 전체 참여자의 가용시간을 히트맵으로 확인합니다.
-
-#### 색상 표현
-
-| 상태 | 색상 |
-|------|------|
-| 아무도 없음 | 회색 (배경색) |
-| 일부 가능 | 연한 초록 (투명도로 인원 비례) |
-| 전원 가능 | 진한 초록 |
-| 조정가능만 있음 | 주황 |
-| 가능 + 조정가능 혼재 | **좌우 분할**: 왼쪽 초록 / 오른쪽 주황 |
-
-- 색상 강도: `opacity = 0.2 + (해당인원 / 전체인원) × 0.8`
-- 각 슬롯에 인원 수 숫자 표시 (가능/조정가능 혼재 시 두 숫자 분리 표시)
-
-#### 툴팁
-- 슬롯에 마우스를 올리면 해당 시간대의 참여자 이름 목록 표시
-- 🟢 가능인 사람과 🟡 조정가능인 사람을 구분하여 표시
-
-#### 연속 시간 필터 (초록 테두리)
-"연속" 드롭다운에서 최소 연속 시간 선택 시:
-- 해당 조건을 만족하는 슬롯에 **짙은 테두리(inset box-shadow)** 강조 표시
-- 초록 테두리: "가능" 인원만으로 연속 조건 충족
-- 노란 테두리: "가능 + 조정가능" 합산으로 연속 조건 충족
-- 블록의 시작/끝/중간에 따라 모서리 라운드 자동 처리
-
-#### 최소 인원 필터
-"인원" 드롭다운에서 N명 이상을 선택하면 해당 인원 이상이 가능한 슬롯만 강조됩니다.
-
----
-
-### 6단계: 참여자 관리
-
-이벤트 페이지 참여자 목록에서 다양한 조작이 가능합니다.
-
-#### 참여자 태그 UI
-- 각 참여자는 태그 형태로 표시
-- **클릭**: 해당 참여자의 가용시간을 그룹 결과 그리드에 하이라이트
-  - 해당 참여자 슬롯: 초록/주황 아웃라인 강조
-  - 나머지 슬롯: 15% 투명도로 흐리게 처리
-- **"−" 배지 클릭**: 해당 참여자를 그룹 결과에서 제외 (취소선 + 흐리게)
-  - "+" 배지 클릭으로 재포함 가능
-
-#### 비밀번호 설정/잠금
-참여 중인 상태에서 자신의 이름 옆 버튼:
-- **🔓 비밀번호 설정**: 비밀번호 설정 모달 열림 (4자 이상 필수)
-  - 설정 후 bcrypt(12 rounds)로 해싱하여 DB 저장
-  - 이후 다른 기기에서 같은 이름으로 참여 시 비밀번호 필요
-- **🔒 잠금**: 이미 비밀번호 설정됨 (재설정 UI 없음)
-
-#### 나가기
-- "나가기" 버튼 클릭 시 `localStorage` 항목 삭제
-- 가용시간 그리드는 읽기 전용으로 전환
-- DB의 가용시간 데이터는 유지됨 (이름 재입력으로 복귀 가능)
-
----
-
-### 실시간 업데이트
-
-- 5초마다 `GET /api/events/[id]/participants` 폴링
-- 자신의 가용시간은 로컬 state를 우선 사용 (폴링으로 덮어쓰지 않음)
-- 다른 참여자의 데이터만 갱신하여 UI 반영
-
----
-
-## 테마
-
-라이트 모드와 다크 모드를 지원합니다. CSS 변수 기반으로 구현되어 있습니다.
-
-| 변수 | 라이트 모드 | 다크 모드 |
-|------|------------|----------|
-| `--bg-primary` | `#ffffff` | `#121212` |
-| `--bg-secondary` | `#f5f5f5` | `#1e1e1e` |
-| `--text-primary` | `#111111` | `#ffffff` |
-| `--text-secondary` | `#666666` | `#aaaaaa` |
-| `--accent` | `#4CAF50` | `#4CAF50` |
-
----
-
-## 성능 최적화
-
-- **디바운스 저장** - 가용시간 변경 시 500ms 디바운스 적용
-- **폴링** - 5초 간격으로 참여자 목록 갱신
-- **sendBeacon** - 페이지 이탈 시 미저장 데이터 전송 보장
-- **터치 최적화** - 그리드 영역 터치 스크롤 방지 (`touch-action: none`)
-- **클립보드 폴백** - `navigator.clipboard` 미지원 시 `textarea + execCommand` 방식 사용
-
----
-
-## 반응형 디자인
-
-- 브레이크포인트: `768px`
-- 모바일에서 그리드 좌우 스크롤 지원
-- 터치 드래그 인터랙션 지원
-- 모바일 최적화 패딩 및 폰트 크기
+- 브레이크포인트 `768px`
+- 모바일에서 "내 일정 / 그룹 결과" 탭으로 그리드 전환 (좌우 2분할 → 단일 컬럼)
+- 터치 드래그 지원
