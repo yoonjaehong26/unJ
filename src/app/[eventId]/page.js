@@ -8,6 +8,7 @@ import styled, { keyframes, css } from "styled-components";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import GroupResultGrid from "@/components/GroupResultGrid";
 import ScheduleImportExport from "@/components/ScheduleImportExport";
+import { addVisitedEvent, saveEventSchedule } from "@/lib/visitedEvents";
 
 const Container = styled.main`
   max-width: 900px;
@@ -342,6 +343,27 @@ const HideToggle = styled.span`
   line-height: 1;
 `;
 
+const DeleteBadge = styled.span`
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid #ef5350;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef5350;
+  line-height: 1;
+`;
+
 const Loading = styled.div`
   text-align: center;
   padding: 60px;
@@ -585,6 +607,34 @@ export default function EventPage({ params }) {
 
   const visibleParticipants = participants.filter((p) => !hiddenNames.has(p._id));
 
+  const handleDeleteParticipant = async (p) => {
+    if (!adminToken) return;
+    if (!window.confirm(`'${p.name}' 참가자를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/participants/${p._id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminToken }),
+      });
+
+      if (res.ok) {
+        setParticipants((prev) => prev.filter((x) => x._id !== p._id));
+        setSelectedParticipants((prev) => prev.filter((sp) => sp._id !== p._id));
+        setHiddenNames((prev) => {
+          const next = new Set(prev);
+          next.delete(p._id);
+          return next;
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "삭제 실패");
+      }
+    } catch {
+      alert("삭제 실패");
+    }
+  };
+
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
 
@@ -784,6 +834,26 @@ export default function EventPage({ params }) {
       }
     };
   }, [eventId, joinedName]);
+
+  // 참가 완료 시 "최근 참가한 방" 목록에 기록
+  useEffect(() => {
+    if (joined && event) {
+      addVisitedEvent({ eventId, eventName: event.name, adminToken });
+    }
+  }, [joined, event, eventId, adminToken]);
+
+  // 내 가용시간을 방별 일정으로 저장 (다른 방에서 "일정 가져오기"에 사용)
+  useEffect(() => {
+    if (joined && event) {
+      saveEventSchedule(eventId, {
+        eventName: event.name,
+        availability: myAvailability,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        dates: event.dates,
+      });
+    }
+  }, [joined, event, eventId, myAvailability]);
 
   const handleAvailabilityChange = (newAvailability) => {
     setMyAvailability(newAvailability);
@@ -1111,8 +1181,19 @@ export default function EventPage({ params }) {
                       toggleHidden(p._id);
                     }}
                   >
-                    {hiddenNames.has(p.name) ? "+" : "−"}
+                    {hiddenNames.has(p._id) ? "+" : "−"}
                   </HideToggle>
+                  {adminToken && (
+                    <DeleteBadge
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteParticipant(p);
+                      }}
+                      title="참가자 삭제 (방장)"
+                    >
+                      ×
+                    </DeleteBadge>
+                  )}
                 </ParticipantTag>
               );
             })
@@ -1159,6 +1240,7 @@ export default function EventPage({ params }) {
       {joined && (
         <ScheduleImportExport
           event={event}
+          eventId={eventId}
           myAvailability={myAvailability}
           onImport={handleAvailabilityChange}
         />

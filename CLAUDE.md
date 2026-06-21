@@ -55,13 +55,17 @@ This is Next 15 — route handlers `await params` (`const { id } = await params`
 - CSS variables only for colors (`var(--accent)`, `var(--bg-card)`, etc.). Don't hardcode theme colors except the fixed status colors `#4CAF50` (green) / `#F5A623` (orange) used in grids.
 - API routes return Korean error messages and use `NextResponse.json(...)` with explicit status codes. Wrap handlers in try/catch and `console.error` on failure, matching existing routes.
 
-## Known gaps / partially-wired
+## Client-side persistence wiring
 
-When touching these, be aware the wiring may be incomplete:
+The localStorage tracking is wired from `src/app/[eventId]/page.js`:
 
-- `addVisitedEvent` and `saveEventSchedule` in `src/lib/visitedEvents.js` are **defined but not called anywhere** — nothing currently writes the visited-rooms/per-room-schedule data that `VisitedEventsSection` and `ScheduleImportExport` read. Those sections will appear empty until a write path is added (likely on join in `src/app/[eventId]/page.js`).
-- The `DELETE …/participants/[participantId]` route exists but **no UI calls it**. The participant "−" toggle in the event page only hides locally (`hiddenNames`), it does not delete.
-- `ScheduleImportExport` is rendered with an `event` prop but reads `eventId` from props that the parent doesn't pass — verify the `eventId` argument when modifying import/export behavior.
+- On successful join (`joined && event`), an effect calls `addVisitedEvent(...)` to record the room in `unj-visited-events`.
+- Another effect calls `saveEventSchedule(...)` whenever `myAvailability` changes, persisting the user's slots per room (`unj-event-schedule-{eventId}`). `ScheduleImportExport`/`VisitedEventsSection` read these.
+- `ScheduleImportExport` is passed `eventId` so it can exclude the current room from import sources.
+
+## Admin participant deletion
+
+`DELETE …/participants/[participantId]` is wired to a red `×` badge on each participant tag, rendered only when `adminToken` is present. It `window.confirm`s, then removes the participant from local state on success. The separate `−` badge is unrelated — it's a local-only hide (`hiddenNames`, by `_id`) available to everyone.
 
 ## Files map
 
