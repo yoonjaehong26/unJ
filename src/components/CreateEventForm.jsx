@@ -177,6 +177,13 @@ const EnterButton = styled.a`
   box-sizing: border-box;
 `;
 
+const WeeklyNote = styled.p`
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.5;
+`;
+
 const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 const ToggleRow = styled.div`
@@ -248,7 +255,9 @@ export default function CreateEventForm() {
 
     setLoading(true);
     try {
-      const allDates = getWeekDates(selectedWeek);
+      // "요일만" 모드는 특정 주차 없이 기준 주(이번주)의 날짜로 요일 라벨만 사용한다.
+      const isWeekly = selectedWeek === "weekly";
+      const allDates = getWeekDates(isWeekly ? 0 : selectedWeek);
       const dates = allDates.filter((_, idx) => selectedDays[idx]);
 
       const res = await fetch("/api/events", {
@@ -260,6 +269,7 @@ export default function CreateEventForm() {
           startTime: timeRange.startTime,
           endTime: timeRange.endTime,
           anonymous,
+          weekly: isWeekly,
         }),
       });
 
@@ -360,6 +370,11 @@ export default function CreateEventForm() {
             </DayButton>
           ))}
         </DayToggleRow>
+        {selectedWeek === "weekly" && (
+          <WeeklyNote>
+            특정 날짜 없이 요일 기준으로 일정을 모읍니다. &ldquo;다음주 거예요?&rdquo; 같은 혼동 없이 매주 반복되는 일정에 적합합니다.
+          </WeeklyNote>
+        )}
       </Section>
 
       <ToggleRow onClick={() => setAnonymous((v) => !v)}>

@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, dates, startTime, endTime, anonymous } = body;
+    const { name, dates, startTime, endTime, anonymous, weekly } = body;
 
     if (!name || !dates?.length) {
       return NextResponse.json(
@@ -29,6 +29,7 @@ export async function POST(request) {
       endTime: endTime || 18,
       adminToken,
       anonymous: !!anonymous,
+      weekly: !!weekly,
       createdAt: new Date(),
     };
 

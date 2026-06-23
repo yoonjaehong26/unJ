@@ -96,6 +96,14 @@ export default function WeekSelector({ selectedWeek, onChange }) {
           </Tab>
         );
       })}
+      <Tab
+        type="button"
+        $selected={selectedWeek === "weekly"}
+        onClick={() => onChange("weekly")}
+      >
+        요일만
+        <DateLabel>날짜 없이</DateLabel>
+      </Tab>
     </TabContainer>
   );
 }

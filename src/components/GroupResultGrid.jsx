@@ -308,6 +308,7 @@ export default function GroupResultGrid({
   endTime,
   participants,
   selectedParticipants = [],
+  weekly = false, // 요일만 모드: 날짜(일자) 헤더 숨김
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [minPeople, setMinPeople] = useState(null);
@@ -340,15 +341,18 @@ export default function GroupResultGrid({
     const availableNames = [];
     const maybeNames = [];
     const onlineOnlyNames = [];
+    const unavailableNames = [];
     participants.forEach((p) => {
       const slot = p.availability?.find((a) => a.dateIdx === dateIdx && a.hour === hour && a.minute === minute);
       if (slot) {
         if (slot.status === "available") availableNames.push(p.name);
         else if (slot.status === "online") onlineOnlyNames.push(p.name);
         else maybeNames.push(p.name);
+      } else {
+        unavailableNames.push(p.name);
       }
     });
-    return { availableNames, maybeNames, onlineOnlyNames };
+    return { availableNames, maybeNames, onlineOnlyNames, unavailableNames };
   };
 
   // 기준 인원 달성 여부 및 색상 반환: green(가능만) | blue(온라인 포함) | yellow(조정 포함) | null
@@ -397,7 +401,7 @@ export default function GroupResultGrid({
   };
 
   const handleMouseEnter = (e, dateIdx, hour, minute) => {
-    const { availableNames, maybeNames, onlineOnlyNames } = getParticipantInfo(dateIdx, hour, minute);
+    const { availableNames, maybeNames, onlineOnlyNames, unavailableNames } = getParticipantInfo(dateIdx, hour, minute);
     if (availableNames.length > 0 || maybeNames.length > 0 || onlineOnlyNames.length > 0) {
       setTooltip({
         x: e.clientX + 10,
@@ -405,6 +409,7 @@ export default function GroupResultGrid({
         availableNames,
         maybeNames,
         onlineOnlyNames,
+        unavailableNames,
         time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
       });
     }
@@ -480,10 +485,14 @@ export default function GroupResultGrid({
           <DayHeader key={i}>{getDayLabel(date)}</DayHeader>
         ))}
 
-        <HeaderCell />
-        {dates.slice(0, 7).map((date, i) => (
-          <DateHeader key={i}>{formatDate(date)}</DateHeader>
-        ))}
+        {!weekly && (
+          <>
+            <HeaderCell />
+            {dates.slice(0, 7).map((date, i) => (
+              <DateHeader key={i}>{formatDate(date)}</DateHeader>
+            ))}
+          </>
+        )}
 
         {hours.map((hour) => (
           <React.Fragment key={hour}>
@@ -574,6 +583,11 @@ export default function GroupResultGrid({
           {tooltip.onlineOnlyNames.length > 0 && (
             <div style={{ marginTop: 4, color: "#53C3F3" }}>
               온라인만가능 ({tooltip.onlineOnlyNames.length}): {tooltip.onlineOnlyNames.join(", ")}
+            </div>
+          )}
+          {tooltip.unavailableNames.length > 0 && (
+            <div style={{ marginTop: 4, color: "rgba(229, 115, 115, 0.65)" }}>
+              불가능 ({tooltip.unavailableNames.length}): {tooltip.unavailableNames.join(", ")}
             </div>
           )}
         </Tooltip>

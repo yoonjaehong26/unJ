@@ -208,6 +208,7 @@ export default function AvailabilityGrid({
   readOnly = false,
   onReadOnlyClick,
   mode = "event", // "event" | "personal"
+  weekly = false, // 요일만 모드: 날짜(일자) 헤더 숨김
   gridTitle,
   hideHeader = false,
 }) {
@@ -425,7 +426,7 @@ export default function AvailabilityGrid({
           </DayHeader>
         ))}
 
-        {mode === "event" && (
+        {mode === "event" && !weekly && (
           <>
             <HeaderCell />
             {colKeys.map((colKey) => (

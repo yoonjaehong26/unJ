@@ -31,6 +31,7 @@ export async function GET(request, { params }) {
       startTime: event.startTime,
       endTime: event.endTime,
       anonymous: !!event.anonymous,
+      weekly: !!event.weekly,
       createdAt: event.createdAt,
     });
   } catch (error) {

@@ -1001,6 +1001,11 @@ export default function EventPage({ params }) {
       <PageHeader>
         <Title>
           {event.name}
+          {event.weekly && (
+            <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: "var(--text-muted)", verticalAlign: "middle" }}>
+              🔁 요일별
+            </span>
+          )}
           {event.anonymous && (
             <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: "var(--text-muted)", verticalAlign: "middle" }}>
               🐾 익명
@@ -1220,6 +1225,7 @@ export default function EventPage({ params }) {
             onChange={handleAvailabilityChange}
             readOnly={!joined}
             onReadOnlyClick={handleReadOnlyGridClick}
+            weekly={event.weekly}
           />
         </MobileGrid>
 
@@ -1233,6 +1239,7 @@ export default function EventPage({ params }) {
               ...sp,
               color: PARTICIPANT_COLORS[idx % PARTICIPANT_COLORS.length],
             }))}
+            weekly={event.weekly}
           />
         </MobileGrid>
       </GridsContainer>
