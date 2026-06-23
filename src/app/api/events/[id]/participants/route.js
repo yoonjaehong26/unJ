@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { getAlias, getDisplayName } from "@/lib/animals";
+import { getAlias, getDisplayName } from "@/lib/cities";
 
 // 참가자 목록 조회
 export async function GET(request, { params }) {

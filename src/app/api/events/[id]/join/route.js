@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import bcrypt from "bcryptjs";
-import { getAlias, getDisplayName, MAX_ANONYMOUS_PARTICIPANTS } from "@/lib/animals";
+import { getAlias, getDisplayName, MAX_ANONYMOUS_PARTICIPANTS } from "@/lib/cities";
 
 export async function POST(request, { params }) {
   try {

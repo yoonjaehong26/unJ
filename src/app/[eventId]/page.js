@@ -1101,7 +1101,7 @@ export default function EventPage({ params }) {
             <Label>이름을 입력하여 참가하세요</Label>
             {event.anonymous && (
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10, marginTop: -2 }}>
-                🐾 익명 모드 — 다른 참가자에게 이름 대신 동물 별칭으로 표시됩니다. 방장에게는 실명이 공개됩니다.
+                🌆 익명 모드 — 다른 참가자에게 이름 대신 도시 별칭으로 표시됩니다. 방장에게는 실명이 공개됩니다.
               </p>
             )}
             <form onSubmit={handleNameSubmit}>

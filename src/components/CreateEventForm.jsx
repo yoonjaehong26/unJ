@@ -367,7 +367,7 @@ export default function CreateEventForm() {
         <div>
           <ToggleLabel>익명 모드</ToggleLabel>
           {" "}
-          <ToggleDesc>참가자들끼리 서로 이름을 볼 수 없고 동물 별칭으로 표시됩니다</ToggleDesc>
+          <ToggleDesc>참가자들끼리 서로 이름을 볼 수 없고 도시 별칭으로 표시됩니다</ToggleDesc>
         </div>
       </ToggleRow>
 
