@@ -161,6 +161,33 @@ const AdminNote = styled.p`
   margin-top: 8px;
 `;
 
+const AdminPanelTitleLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const LockToggleBtn = styled.button`
+  padding: 4px 10px;
+  border: 1px solid ${(props) => (props.$locked ? "#e74c3c" : "var(--border-subtle)")};
+  border-radius: 6px;
+  background: ${(props) => (props.$locked ? "#e74c3c" : "transparent")};
+  color: ${(props) => (props.$locked ? "white" : "var(--text-secondary)")};
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const NameSection = styled.div`
   margin-bottom: 24px;
 
@@ -564,6 +591,8 @@ export default function EventPage({ params }) {
   const [adminSelectedDays, setAdminSelectedDays] = useState(null);
   const [adminSaving, setAdminSaving] = useState(false);
   const [adminSaveMsg, setAdminSaveMsg] = useState(null); // { text, error }
+  const [lockToggling, setLockToggling] = useState(false);
+  const [lockMsg, setLockMsg] = useState(null); // { text, error }
 
   const PARTICIPANT_COLORS = [
     '#4CAF50', '#2196F3', '#FF7043', '#E91E63',
@@ -692,9 +721,12 @@ export default function EventPage({ params }) {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(buildParticipantsUrl(adminToken, participantId));
-        if (res.ok) {
-          const data = await res.json();
+        const [participantsRes, eventRes] = await Promise.all([
+          fetch(buildParticipantsUrl(adminToken, participantId)),
+          fetch(`/api/events/${eventId}`),
+        ]);
+        if (participantsRes.ok) {
+          const data = await participantsRes.json();
           if (participantId) {
             setParticipants((prev) => {
               const others = data.filter((p) => p._id !== participantId);
@@ -704,6 +736,10 @@ export default function EventPage({ params }) {
           } else {
             setParticipants(data);
           }
+        }
+        if (eventRes.ok) {
+          const eventData = await eventRes.json();
+          setEvent((prev) => (prev ? { ...prev, locked: !!eventData.locked } : prev));
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -790,6 +826,8 @@ export default function EventPage({ params }) {
           const myData = { ...(me || {}), _id: participantId, availability };
           return [...others, myData];
         });
+      } else if (res.status === 423) {
+        window.location.reload();
       } else {
         console.error("Save failed:", await res.text());
       }
@@ -988,6 +1026,35 @@ export default function EventPage({ params }) {
     }
   };
 
+  const handleToggleLock = async () => {
+    if (!adminToken || !event) return;
+    const nextLocked = !event.locked;
+
+    setLockToggling(true);
+    setLockMsg(null);
+
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminToken, locked: nextLocked }),
+      });
+
+      if (res.ok) {
+        setEvent((prev) => (prev ? { ...prev, locked: nextLocked } : prev));
+        setLockMsg({ text: nextLocked ? "잠금 설정됨" : "잠금 해제됨", error: false });
+        setTimeout(() => setLockMsg(null), 2000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setLockMsg({ text: data.error || "잠금 상태 변경 실패", error: true });
+      }
+    } catch {
+      setLockMsg({ text: "잠금 상태 변경 실패", error: true });
+    } finally {
+      setLockToggling(false);
+    }
+  };
+
   if (loading) {
     return <Loading>불러오는 중...</Loading>;
   }
@@ -1011,6 +1078,11 @@ export default function EventPage({ params }) {
               🐾 익명
             </span>
           )}
+          {event.locked && (
+            <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 400, color: "#e74c3c", verticalAlign: "middle" }}>
+              🔒 잠김
+            </span>
+          )}
         </Title>
         <HeaderButtons>
           {adminToken && (
@@ -1027,7 +1099,21 @@ export default function EventPage({ params }) {
       {adminToken && adminSelectedDays && (
         <AdminPanel>
           <AdminPanelTitle $open={adminPanelOpen} onClick={() => setAdminPanelOpen((v) => !v)}>
-            방장 설정
+            <AdminPanelTitleLeft>
+              방장 설정
+              <LockToggleBtn
+                type="button"
+                $locked={!!event.locked}
+                disabled={lockToggling}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleLock();
+                }}
+              >
+                {lockToggling ? "처리 중..." : event.locked ? "🔓 잠금 해제" : "🔒 전면 잠금"}
+              </LockToggleBtn>
+              {lockMsg && <AdminSaveMsg $error={lockMsg.error}>{lockMsg.text}</AdminSaveMsg>}
+            </AdminPanelTitleLeft>
             <span style={{
               fontSize: 10,
               display: "inline-block",
@@ -1089,6 +1175,12 @@ export default function EventPage({ params }) {
                   <AdminSaveMsg $error={adminSaveMsg.error}>{adminSaveMsg.text}</AdminSaveMsg>
                 )}
               </AdminSaveRow>
+
+              {event.locked && (
+                <AdminNote>
+                  🔒 잠긴 상태에서는 참가는 가능하지만 일정 저장은 차단됩니다.
+                </AdminNote>
+              )}
 
               {participants.length > 0 && (
                 <AdminNote>
@@ -1223,9 +1315,11 @@ export default function EventPage({ params }) {
             endTime={event.endTime}
             availability={myAvailability}
             onChange={handleAvailabilityChange}
-            readOnly={!joined}
+            readOnly={!joined || !!event.locked}
             onReadOnlyClick={handleReadOnlyGridClick}
+            locked={!!event.locked}
             weekly={event.weekly}
+            gridTitle={joined ? "내 가용시간" : undefined}
           />
         </MobileGrid>
 

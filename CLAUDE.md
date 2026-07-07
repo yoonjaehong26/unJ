@@ -26,7 +26,7 @@ No test suite exists. Verify changes by running the app. Requires `MONGODB_URI` 
 
 Two MongoDB collections in db `unj`:
 
-- **`events`**: `{ name, dates: [Date], startTime, endTime, adminToken (UUID), anonymous, createdAt }`
+- **`events`**: `{ name, dates: [Date], startTime, endTime, adminToken (UUID), anonymous, weekly, locked, createdAt }`
 - **`participants`**: `{ eventId: ObjectId, name, aliasIndex?, password (bcrypt|null), availability: [{dateIdx, hour, minute, status}], createdAt, updatedAt }`
 
 `status` is `"available"` (가능) or `"maybe"` (조정가능). A participant is unique per `(eventId, name)`.
@@ -42,7 +42,8 @@ Two MongoDB collections in db `unj`:
   - `unj-my-schedule` → personal day-of-week availability.
   - `unj-visited-events` / `unj-event-schedule-{eventId}` → recent rooms & per-room saved schedules.
   - `theme` → dark/light.
-- **Saving availability**: edit → `onChange` → 500ms debounce → `POST …/participants`. Unmount flushes pending data via `navigator.sendBeacon`. A 5s poll refreshes other participants but never overwrites the local user's own slots.
+- **Saving availability**: edit → `onChange` → 500ms debounce → `POST …/participants`. Unmount flushes pending data via `navigator.sendBeacon`. A 5s poll refreshes other participants (and `event.locked`) but never overwrites the local user's own slots.
+- **Event lock**: `event.locked` (toggled by the admin via `PATCH /api/events/[id]` with `{ adminToken, locked }`) freezes availability writes for everyone, admin included — `POST …/participants` rejects with `423` when locked. Joining is unaffected; only saving is blocked. The grid goes `readOnly` client-side too, and the 5s poll propagates the flag to already-open tabs.
 
 ### Async params
 

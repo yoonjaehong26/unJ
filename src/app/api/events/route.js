@@ -30,6 +30,7 @@ export async function POST(request) {
       adminToken,
       anonymous: !!anonymous,
       weekly: !!weekly,
+      locked: false,
       createdAt: new Date(),
     };
 

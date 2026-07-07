@@ -8,11 +8,11 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
 
 const Container = styled.div`
   background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid ${(props) => (props.$locked ? "#9e9e9e" : "var(--border-subtle)")};
   border-radius: 12px;
   padding: 16px;
   overflow-x: auto;
@@ -55,6 +55,34 @@ const GridTitle = styled.h3`
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+`;
+
+const lockShakeAnim = keyframes`
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-4px); }
+  40%  { transform: translateX(4px); }
+  60%  { transform: translateX(-3px); }
+  80%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+`;
+
+const LockIcon = styled.span`
+  font-size: 15px;
+  display: inline-block;
+  ${(props) => props.$shake && css`animation: ${lockShakeAnim} 0.4s ease;`}
+`;
+
+const LockNotice = styled.span`
+  font-size: 12px;
+  font-weight: 500;
+  color: #e74c3c;
 `;
 
 const ModeToggle = styled.div`
@@ -207,6 +235,7 @@ export default function AvailabilityGrid({
   onChange,
   readOnly = false,
   onReadOnlyClick,
+  locked = false,
   mode = "event", // "event" | "personal"
   weekly = false, // 요일만 모드: 날짜(일자) 헤더 숨김
   gridTitle,
@@ -217,7 +246,16 @@ export default function AvailabilityGrid({
   const [dragColumn, setDragColumn] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [selectionMode, setSelectionMode] = useState("available");
+  const [lockShake, setLockShake] = useState(false);
+  const [showLockNotice, setShowLockNotice] = useState(false);
   const gridRef = useRef(null);
+
+  const triggerLockNotice = () => {
+    setLockShake(true);
+    setShowLockNotice(true);
+    setTimeout(() => setLockShake(false), 400);
+    setTimeout(() => window.location.reload(), 700);
+  };
 
   // 탭 vs 드래그 구분용 refs
   const touchStartPosRef = useRef(null);
@@ -272,7 +310,14 @@ export default function AvailabilityGrid({
   }, [availability, onChange, selectionMode, startTime, mode]);
 
   const startDrag = (colKey, hour, minute) => {
-    if (readOnly) { onReadOnlyClick?.(); return; }
+    if (readOnly) {
+      if (locked) {
+        triggerLockNotice();
+      } else {
+        onReadOnlyClick?.();
+      }
+      return;
+    }
     const field = mode === "personal" ? "dayOfWeek" : "dateIdx";
 
     setIsDragging(true);
@@ -385,12 +430,19 @@ export default function AvailabilityGrid({
   return (
     <Container
       ref={gridRef}
+      $locked={locked}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onTouchEnd={handleTouchEnd}
     >
       {!hideHeader && <Header>
-        <GridTitle>{title}</GridTitle>
+        <TitleRow>
+          <GridTitle>{title}</GridTitle>
+          {locked && <LockIcon $shake={lockShake}>🔒</LockIcon>}
+          {locked && showLockNotice && (
+            <LockNotice>더 이상 수정할 수 없습니다. 새로고침합니다...</LockNotice>
+          )}
+        </TitleRow>
         {!readOnly && (
           <ModeToggle>
             <ModeButton

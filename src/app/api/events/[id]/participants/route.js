@@ -81,6 +81,20 @@ export async function POST(request, { params }) {
     const client = await clientPromise;
     const db = client.db("unj");
 
+    const event = await db.collection("events").findOne(
+      { _id: new ObjectId(id) },
+      { projection: { locked: 1 } }
+    );
+    if (!event) {
+      return NextResponse.json({ error: "이벤트를 찾을 수 없습니다" }, { status: 404 });
+    }
+    if (event.locked) {
+      return NextResponse.json(
+        { error: "이벤트가 잠겨 있어 일정을 저장할 수 없습니다" },
+        { status: 423 }
+      );
+    }
+
     const updateDoc = {
       $set: {
         availability: availability || [],

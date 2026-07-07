@@ -32,6 +32,7 @@ export async function GET(request, { params }) {
       endTime: event.endTime,
       anonymous: !!event.anonymous,
       weekly: !!event.weekly,
+      locked: !!event.locked,
       createdAt: event.createdAt,
     });
   } catch (error) {
@@ -48,7 +49,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "잘못된 ID" }, { status: 400 });
     }
 
-    const { adminToken, startTime, endTime, dates } = await request.json();
+    const { adminToken, startTime, endTime, dates, locked } = await request.json();
 
     if (!adminToken) {
       return NextResponse.json({ error: "권한 없음" }, { status: 401 });
@@ -70,6 +71,7 @@ export async function PATCH(request, { params }) {
     if (startTime !== undefined) update.startTime = startTime;
     if (endTime !== undefined) update.endTime = endTime;
     if (dates !== undefined) update.dates = dates.map((d) => new Date(d));
+    if (locked !== undefined) update.locked = !!locked;
 
     await db.collection("events").updateOne(
       { _id: new ObjectId(id) },
