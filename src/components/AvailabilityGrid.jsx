@@ -12,7 +12,12 @@ import styled, { keyframes, css } from "styled-components";
 
 const Container = styled.div`
   background: var(--bg-card);
-  border: 1px solid ${(props) => (props.$locked ? "#9e9e9e" : "var(--border-subtle)")};
+  border: 1px solid ${(props) => {
+    if (props.$locked) return "#9e9e9e";
+    if (props.$justUnlocked) return "var(--accent)";
+    return "var(--border-subtle)";
+  }};
+  transition: border-color 0.3s ease;
   border-radius: 12px;
   padding: 16px;
   overflow-x: auto;
@@ -248,14 +253,27 @@ export default function AvailabilityGrid({
   const [selectionMode, setSelectionMode] = useState("available");
   const [lockShake, setLockShake] = useState(false);
   const [showLockNotice, setShowLockNotice] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  const wasLockedRef = useRef(locked);
   const gridRef = useRef(null);
 
   const triggerLockNotice = () => {
     setLockShake(true);
     setShowLockNotice(true);
     setTimeout(() => setLockShake(false), 400);
-    setTimeout(() => window.location.reload(), 700);
+    setTimeout(() => setShowLockNotice(false), 1600);
   };
+
+  // 잠금 해제 순간을 감지해 잠깐 초록색 테두리로 표시
+  React.useEffect(() => {
+    const wasLocked = wasLockedRef.current;
+    wasLockedRef.current = locked;
+    if (wasLocked && !locked) {
+      setJustUnlocked(true);
+      const timer = setTimeout(() => setJustUnlocked(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [locked]);
 
   // 탭 vs 드래그 구분용 refs
   const touchStartPosRef = useRef(null);
@@ -431,6 +449,7 @@ export default function AvailabilityGrid({
     <Container
       ref={gridRef}
       $locked={locked}
+      $justUnlocked={justUnlocked}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onTouchEnd={handleTouchEnd}
@@ -440,7 +459,7 @@ export default function AvailabilityGrid({
           <GridTitle>{title}</GridTitle>
           {locked && <LockIcon $shake={lockShake}>🔒</LockIcon>}
           {locked && showLockNotice && (
-            <LockNotice>더 이상 수정할 수 없습니다. 새로고침합니다...</LockNotice>
+            <LockNotice>더 이상 수정할 수 없습니다</LockNotice>
           )}
         </TitleRow>
         {!readOnly && (

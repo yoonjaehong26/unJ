@@ -666,6 +666,7 @@ export default function EventPage({ params }) {
 
   const saveTimeoutRef = useRef(null);
   const pendingAvailabilityRef = useRef(null);
+  const lastSavedAvailabilityRef = useRef([]);
 
   const buildParticipantsUrl = useCallback((token, pId) => {
     const params = new URLSearchParams();
@@ -784,6 +785,7 @@ export default function EventPage({ params }) {
         setParticipantId(data.participantId);
         setHasPassword(data.hasPassword);
         setMyAvailability(data.availability || []);
+        lastSavedAvailabilityRef.current = data.availability || [];
         setShowPasswordModal(false);
 
         // 참가자 목록을 participantId로 다시 조회해서 최신 displayName 반영
@@ -820,6 +822,7 @@ export default function EventPage({ params }) {
       });
 
       if (res.ok) {
+        lastSavedAvailabilityRef.current = availability;
         setParticipants((prev) => {
           const others = prev.filter((p) => p._id !== participantId);
           const me = prev.find((p) => p._id === participantId);
@@ -827,7 +830,9 @@ export default function EventPage({ params }) {
           return [...others, myData];
         });
       } else if (res.status === 423) {
-        window.location.reload();
+        // 저장 직전에 잠긴 경우: 반영되지 않은 편집을 되돌리고 잠금 상태만 동기화 (새로고침 없음)
+        setMyAvailability(lastSavedAvailabilityRef.current);
+        setEvent((prev) => (prev ? { ...prev, locked: true } : prev));
       } else {
         console.error("Save failed:", await res.text());
       }
