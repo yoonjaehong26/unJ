@@ -141,6 +141,10 @@ const HeaderCell = styled.div`
   text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
 
   @media (max-width: 768px) {
     padding: 6px 2px;
@@ -148,13 +152,23 @@ const HeaderCell = styled.div`
   }
 `;
 
+const WEEKEND_COLOR = { sat: "#3B82F6", sun: "#E53935" };
+
+const weekendBorder = (props) =>
+  props.$weekend === "sat" &&
+  css`
+    border-left: 2px solid ${WEEKEND_COLOR.sat};
+  `;
+
 const DayHeader = styled(HeaderCell)`
   font-weight: 500;
-  color: var(--text-primary);
+  color: ${(props) => (props.$weekend ? WEEKEND_COLOR[props.$weekend] : "var(--text-primary)")};
+  ${weekendBorder}
 `;
 
 const DateHeader = styled(HeaderCell)`
   font-size: 11px;
+  ${weekendBorder}
 
   @media (max-width: 768px) {
     font-size: 10px;
@@ -189,6 +203,7 @@ const HourGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1px;
+  ${weekendBorder}
 `;
 
 const HalfHourCell = styled.div`
@@ -230,6 +245,14 @@ const DAY_OF_WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
 function getDayLabel(dateStr) {
   return DAY_OF_WEEK_LABELS[new Date(dateStr).getDay()];
+}
+
+// colKey → "sat" | "sun" | null (personal 모드는 DAYS 배열 순서, event 모드는 실제 날짜 기준)
+function getWeekendType(colKey, dates, mode) {
+  const dow = mode === "personal" ? (colKey + 1) % 7 : dates[colKey] ? new Date(dates[colKey]).getDay() : null;
+  if (dow === 6) return "sat";
+  if (dow === 0) return "sun";
+  return null;
 }
 
 export default function AvailabilityGrid({
@@ -492,7 +515,7 @@ export default function AvailabilityGrid({
       <Grid $cols={numCols}>
         <HeaderCell />
         {colKeys.map((colKey) => (
-          <DayHeader key={colKey}>
+          <DayHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
             {mode === "event" && dates[colKey] ? getDayLabel(dates[colKey]) : DAYS[colKey]}
           </DayHeader>
         ))}
@@ -501,7 +524,7 @@ export default function AvailabilityGrid({
           <>
             <HeaderCell />
             {colKeys.map((colKey) => (
-              <DateHeader key={colKey}>
+              <DateHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
                 {dates[colKey] ? formatDate(dates[colKey]) : ""}
               </DateHeader>
             ))}
@@ -512,7 +535,7 @@ export default function AvailabilityGrid({
           <React.Fragment key={hour}>
             <TimeLabel>{formatHour(hour)}</TimeLabel>
             {colKeys.map((colKey) => (
-              <HourGroup key={`${colKey}-${hour}`}>
+              <HourGroup key={`${colKey}-${hour}`} $weekend={getWeekendType(colKey, dates, mode)}>
                 <HalfHourCell
                   $status={getSlotStatus(colKey, hour, 0)}
                   $isHalf={false}

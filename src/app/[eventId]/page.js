@@ -498,7 +498,12 @@ const MobileGridToggle = styled.div`
   @media (max-width: 768px) {
     display: flex;
     border-bottom: 1px solid var(--border-subtle);
-    margin-bottom: 16px;
+    margin: 0 -12px 16px;
+    padding: 0 12px;
+    position: sticky;
+    top: 52px;
+    z-index: 10;
+    background: var(--bg-primary);
   }
 `;
 

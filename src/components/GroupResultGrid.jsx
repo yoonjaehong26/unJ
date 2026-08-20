@@ -4,7 +4,7 @@
 "use client";
 
 import React, { useState } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
 const Container = styled.div`
   background: var(--bg-card);
@@ -158,15 +158,29 @@ const HeaderCell = styled.div`
   text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
 `;
+
+const WEEKEND_COLOR = { sat: "#3B82F6", sun: "#E53935" };
+
+const weekendBorder = (props) =>
+  props.$weekend === "sat" &&
+  css`
+    border-left: 2px solid ${WEEKEND_COLOR.sat};
+  `;
 
 const DayHeader = styled(HeaderCell)`
   font-weight: 500;
-  color: var(--text-primary);
+  color: ${(props) => (props.$weekend ? WEEKEND_COLOR[props.$weekend] : "var(--text-primary)")};
+  ${weekendBorder}
 `;
 
 const DateHeader = styled(HeaderCell)`
   font-size: 11px;
+  ${weekendBorder}
 `;
 
 const TimeLabel = styled.div`
@@ -184,6 +198,7 @@ const HourGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0;
+  ${weekendBorder}
 `;
 
 const HIGHLIGHT_VARS = {
@@ -300,6 +315,14 @@ const DAY_OF_WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 function getDayLabel(dateStr) {
   const date = new Date(dateStr);
   return DAY_OF_WEEK_LABELS[date.getDay()];
+}
+
+// 실제 날짜 기준으로 "sat" | "sun" | null 반환
+function getWeekendType(dateStr) {
+  const dow = new Date(dateStr).getDay();
+  if (dow === 6) return "sat";
+  if (dow === 0) return "sun";
+  return null;
 }
 
 export default function GroupResultGrid({
@@ -482,14 +505,14 @@ export default function GroupResultGrid({
       <Grid $cols={numCols}>
         <HeaderCell />
         {dates.slice(0, 7).map((date, i) => (
-          <DayHeader key={i}>{getDayLabel(date)}</DayHeader>
+          <DayHeader key={i} $weekend={getWeekendType(date)}>{getDayLabel(date)}</DayHeader>
         ))}
 
         {!weekly && (
           <>
             <HeaderCell />
             {dates.slice(0, 7).map((date, i) => (
-              <DateHeader key={i}>{formatDate(date)}</DateHeader>
+              <DateHeader key={i} $weekend={getWeekendType(date)}>{formatDate(date)}</DateHeader>
             ))}
           </>
         )}
@@ -497,7 +520,7 @@ export default function GroupResultGrid({
         {hours.map((hour) => (
           <React.Fragment key={hour}>
             <TimeLabel>{formatHour(hour)}</TimeLabel>
-            {dates.slice(0, 7).map((_, dateIdx) => {
+            {dates.slice(0, 7).map((date, dateIdx) => {
               const counts00 = getCounts(dateIdx, hour, 0);
               const counts30 = getCounts(dateIdx, hour, 30);
               const border00 = getBorderInfo(dateIdx, hour, 0);
@@ -513,7 +536,7 @@ export default function GroupResultGrid({
                 return `linear-gradient(to bottom, ${stops})`;
               };
               return (
-                <HourGroup key={`${dateIdx}-${hour}`}>
+                <HourGroup key={`${dateIdx}-${hour}`} $weekend={getWeekendType(date)}>
                   <HalfHourCell
                     $available={counts00.available}
                     $maybe={counts00.maybe}
