@@ -153,34 +153,43 @@ const Grid = styled.div`
   }
 `;
 
+const HeaderGrid = styled(Grid)`
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+  margin-bottom: 2px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 1px;
+  }
+`;
+
 const HeaderCell = styled.div`
   padding: 8px 4px;
   text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--bg-card);
 `;
 
 const WEEKEND_COLOR = { sat: "#3B82F6", sun: "#E53935" };
+const WEEKEND_TINT = { sat: "rgba(59, 130, 246, 0.10)", sun: "rgba(229, 57, 53, 0.10)" };
 
-const weekendBorder = (props) =>
-  props.$weekend === "sat" &&
+const weekendTint = (props) =>
+  props.$weekend &&
   css`
-    border-left: 2px solid ${WEEKEND_COLOR.sat};
+    background: ${WEEKEND_TINT[props.$weekend]};
   `;
 
 const DayHeader = styled(HeaderCell)`
   font-weight: 500;
   color: ${(props) => (props.$weekend ? WEEKEND_COLOR[props.$weekend] : "var(--text-primary)")};
-  ${weekendBorder}
+  ${weekendTint}
 `;
 
 const DateHeader = styled(HeaderCell)`
   font-size: 11px;
-  ${weekendBorder}
+  ${weekendTint}
 `;
 
 const TimeLabel = styled.div`
@@ -198,7 +207,6 @@ const HourGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0;
-  ${weekendBorder}
 `;
 
 const HIGHLIGHT_VARS = {
@@ -215,7 +223,7 @@ const HalfHourCell = styled.div`
     const onlineOnly = props.$onlineOnly || 0;
     const anyFlexible = maybe + onlineOnly;
     const total = available + anyFlexible;
-    if (total === 0) return "var(--bg-secondary)";
+    if (total === 0) return props.$weekend ? WEEKEND_TINT[props.$weekend] : "var(--bg-secondary)";
 
     if (available > 0 && anyFlexible > 0) {
       const greenIntensity = Math.min(available / props.$total, 1);
@@ -502,7 +510,7 @@ export default function GroupResultGrid({
         )}
       </Legend>
 
-      <Grid $cols={numCols}>
+      <HeaderGrid $cols={numCols}>
         <HeaderCell />
         {dates.slice(0, 7).map((date, i) => (
           <DayHeader key={i} $weekend={getWeekendType(date)}>{getDayLabel(date)}</DayHeader>
@@ -516,7 +524,9 @@ export default function GroupResultGrid({
             ))}
           </>
         )}
+      </HeaderGrid>
 
+      <Grid $cols={numCols}>
         {hours.map((hour) => (
           <React.Fragment key={hour}>
             <TimeLabel>{formatHour(hour)}</TimeLabel>
@@ -535,13 +545,15 @@ export default function GroupResultGrid({
                 const stops = colors.map((c, i) => `${c} ${(i/n)*100}% ${((i+1)/n)*100}%`).join(', ');
                 return `linear-gradient(to bottom, ${stops})`;
               };
+              const weekend = getWeekendType(date);
               return (
-                <HourGroup key={`${dateIdx}-${hour}`} $weekend={getWeekendType(date)}>
+                <HourGroup key={`${dateIdx}-${hour}`}>
                   <HalfHourCell
                     $available={counts00.available}
                     $maybe={counts00.maybe}
                     $onlineOnly={counts00.onlineOnly}
                     $total={totalParticipants}
+                    $weekend={weekend}
                     $borderTop={border00.borderTop}
                     $borderBottom={border00.borderBottom}
                     $borderSides={border00.borderSides}
@@ -565,6 +577,7 @@ export default function GroupResultGrid({
                     $maybe={counts30.maybe}
                     $onlineOnly={counts30.onlineOnly}
                     $total={totalParticipants}
+                    $weekend={weekend}
                     $borderTop={border30.borderTop}
                     $borderBottom={border30.borderBottom}
                     $borderSides={border30.borderSides}

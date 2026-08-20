@@ -123,6 +123,19 @@ const ModeButton = styled.button`
   }
 `;
 
+const StickyToolbar = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-card);
+`;
+
+const ModeToggleRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+`;
+
 const Grid = styled.div`
   display: grid;
   grid-template-columns: 50px repeat(${(props) => props.$cols}, minmax(40px, 1fr));
@@ -136,15 +149,19 @@ const Grid = styled.div`
   }
 `;
 
+const HeaderGrid = styled(Grid)`
+  margin-bottom: 2px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 1px;
+  }
+`;
+
 const HeaderCell = styled.div`
   padding: 8px 4px;
   text-align: center;
   font-size: 12px;
   color: var(--text-secondary);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--bg-card);
 
   @media (max-width: 768px) {
     padding: 6px 2px;
@@ -153,22 +170,23 @@ const HeaderCell = styled.div`
 `;
 
 const WEEKEND_COLOR = { sat: "#3B82F6", sun: "#E53935" };
+const WEEKEND_TINT = { sat: "rgba(59, 130, 246, 0.10)", sun: "rgba(229, 57, 53, 0.10)" };
 
-const weekendBorder = (props) =>
-  props.$weekend === "sat" &&
+const weekendTint = (props) =>
+  props.$weekend &&
   css`
-    border-left: 2px solid ${WEEKEND_COLOR.sat};
+    background: ${WEEKEND_TINT[props.$weekend]};
   `;
 
 const DayHeader = styled(HeaderCell)`
   font-weight: 500;
   color: ${(props) => (props.$weekend ? WEEKEND_COLOR[props.$weekend] : "var(--text-primary)")};
-  ${weekendBorder}
+  ${weekendTint}
 `;
 
 const DateHeader = styled(HeaderCell)`
   font-size: 11px;
-  ${weekendBorder}
+  ${weekendTint}
 
   @media (max-width: 768px) {
     font-size: 10px;
@@ -203,7 +221,6 @@ const HourGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1px;
-  ${weekendBorder}
 `;
 
 const HalfHourCell = styled.div`
@@ -212,7 +229,7 @@ const HalfHourCell = styled.div`
     if (props.$status === "available") return "var(--accent)";
     if (props.$status === "online") return "#53C3F3";
     if (props.$status === "offline" || props.$status === "maybe") return "#F5A623";
-    return "var(--bg-secondary)";
+    return props.$weekend ? WEEKEND_TINT[props.$weekend] : "var(--bg-secondary)";
   }};
   cursor: pointer;
   touch-action: none;
@@ -485,75 +502,87 @@ export default function AvailabilityGrid({
             <LockNotice>더 이상 수정할 수 없습니다</LockNotice>
           )}
         </TitleRow>
-        {!readOnly && (
-          <ModeToggle>
-            <ModeButton
-              $active={selectionMode === "available"}
-              $color="var(--accent)"
-              onClick={() => setSelectionMode("available")}
-            >
-              가능
-            </ModeButton>
-            <ModeButton
-              $active={selectionMode === "online"}
-              $color="#53C3F3"
-              onClick={() => setSelectionMode("online")}
-            >
-              온라인만가능
-            </ModeButton>
-            <ModeButton
-              $active={selectionMode === "maybe"}
-              $color="#F5A623"
-              onClick={() => setSelectionMode("maybe")}
-            >
-              미정
-            </ModeButton>
-          </ModeToggle>
-        )}
       </Header>}
 
-      <Grid $cols={numCols}>
-        <HeaderCell />
-        {colKeys.map((colKey) => (
-          <DayHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
-            {mode === "event" && dates[colKey] ? getDayLabel(dates[colKey]) : DAYS[colKey]}
-          </DayHeader>
-        ))}
-
-        {mode === "event" && !weekly && (
-          <>
-            <HeaderCell />
-            {colKeys.map((colKey) => (
-              <DateHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
-                {dates[colKey] ? formatDate(dates[colKey]) : ""}
-              </DateHeader>
-            ))}
-          </>
+      <StickyToolbar>
+        {!hideHeader && !readOnly && (
+          <ModeToggleRow>
+            <ModeToggle>
+              <ModeButton
+                $active={selectionMode === "available"}
+                $color="var(--accent)"
+                onClick={() => setSelectionMode("available")}
+              >
+                가능
+              </ModeButton>
+              <ModeButton
+                $active={selectionMode === "online"}
+                $color="#53C3F3"
+                onClick={() => setSelectionMode("online")}
+              >
+                온라인만가능
+              </ModeButton>
+              <ModeButton
+                $active={selectionMode === "maybe"}
+                $color="#F5A623"
+                onClick={() => setSelectionMode("maybe")}
+              >
+                미정
+              </ModeButton>
+            </ModeToggle>
+          </ModeToggleRow>
         )}
 
+        <HeaderGrid $cols={numCols}>
+          <HeaderCell />
+          {colKeys.map((colKey) => (
+            <DayHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
+              {mode === "event" && dates[colKey] ? getDayLabel(dates[colKey]) : DAYS[colKey]}
+            </DayHeader>
+          ))}
+
+          {mode === "event" && !weekly && (
+            <>
+              <HeaderCell />
+              {colKeys.map((colKey) => (
+                <DateHeader key={colKey} $weekend={getWeekendType(colKey, dates, mode)}>
+                  {dates[colKey] ? formatDate(dates[colKey]) : ""}
+                </DateHeader>
+              ))}
+            </>
+          )}
+        </HeaderGrid>
+      </StickyToolbar>
+
+      <Grid $cols={numCols}>
         {hours.map((hour) => (
           <React.Fragment key={hour}>
             <TimeLabel>{formatHour(hour)}</TimeLabel>
-            {colKeys.map((colKey) => (
-              <HourGroup key={`${colKey}-${hour}`} $weekend={getWeekendType(colKey, dates, mode)}>
-                <HalfHourCell
-                  $status={getSlotStatus(colKey, hour, 0)}
-                  $isHalf={false}
-                  data-slot={`${colKey}-${hour}-0`}
-                  onMouseDown={() => handleMouseDown(colKey, hour, 0)}
-                  onMouseEnter={() => handleMouseEnter(colKey, hour, 0)}
-                  onTouchStart={(e) => handleTouchStart(e, colKey, hour, 0)}
-                />
-                <HalfHourCell
-                  $status={getSlotStatus(colKey, hour, 30)}
-                  $isHalf={true}
-                  data-slot={`${colKey}-${hour}-30`}
-                  onMouseDown={() => handleMouseDown(colKey, hour, 30)}
-                  onMouseEnter={() => handleMouseEnter(colKey, hour, 30)}
-                  onTouchStart={(e) => handleTouchStart(e, colKey, hour, 30)}
-                />
-              </HourGroup>
-            ))}
+            {colKeys.map((colKey) => {
+              const weekend = getWeekendType(colKey, dates, mode);
+              return (
+                <HourGroup key={`${colKey}-${hour}`}>
+                  <HalfHourCell
+                    $status={getSlotStatus(colKey, hour, 0)}
+                    $weekend={weekend}
+                    $isHalf={false}
+                    data-slot={`${colKey}-${hour}-0`}
+                    onMouseDown={() => handleMouseDown(colKey, hour, 0)}
+                    onMouseEnter={() => handleMouseEnter(colKey, hour, 0)}
+                    onTouchStart={(e) => handleTouchStart(e, colKey, hour, 0)}
+                  />
+                  <HalfHourCell
+                    $status={getSlotStatus(colKey, hour, 30)}
+                    $weekend={weekend}
+                    $isHalf={true}
+                    data-slot={`${colKey}-${hour}-30`}
+                    onMouseDown={() => handleMouseDown(colKey, hour, 30)}
+                    onMouseEnter={() => handleMouseEnter(colKey, hour, 30)}
+                    onTouchStart={(e) => handleTouchStart(e, colKey, hour, 30)}
+                  />
+                </HourGroup>
+              );
+            })}
           </React.Fragment>
         ))}
       </Grid>
